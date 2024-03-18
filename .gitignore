@@ -1,0 +1,13 @@
+*.dsn 
+*.trn 
+*xcelium* 
+*.log 
+*history
+*xrun*
+*.simvision*
+*.nfs*
+*my_regression*
+*.bpad*
+*.diag
+*.err
+*cov_work*
