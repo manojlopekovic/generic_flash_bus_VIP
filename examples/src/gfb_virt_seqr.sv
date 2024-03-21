@@ -6,18 +6,19 @@ Notes         :
 Date          : 18.03.2023.
 -----------------------------------------------------------------*/
 
-class gfb_virt_seqr extends uvm_sequencer;
+class gfb_virt_seqr#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) extends uvm_sequencer;
 
   // Properties
   // gfb_env_config_class env_config;
-  // gfb_agent_config_class agt_config_m;
-  // gfb_agent_config_class agt_config_s;
+  gfb_config master_cfg;
+  gfb_config slave_cfg;
 
   // Sequencers
-  gfb_sequencer sequencer;
+  gfb_sequencer master_sequencer;
+  gfb_sequencer slave_sequencer;
 
   // Registration
-  `uvm_component_utils(gfb_virt_seqr)
+  `uvm_component_param_utils(gfb_virt_seqr#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH))
 
   // Constructor
   function new(string name, uvm_component parent);
@@ -26,12 +27,12 @@ class gfb_virt_seqr extends uvm_sequencer;
 
   // Phases
   function void build_phase(uvm_phase phase);
-    // if(!uvm_config_db#(gfb_env_config_class)::get(this, "", "env_config", env_config))
-    //   `uvm_fatal(get_full_name(), "Failed to get env_config in virtual sequencer")
-    // if(!uvm_config_db#(gfb_agent_config_class)::get(this, "", "agent_config_m", agt_config_m))
-    //   `uvm_fatal(get_full_name(), "Failed to get agentConfig in virtual sequencer")
-    // if(!uvm_config_db#(gfb_agent_config_class)::get(this, "", "agent_config_s", agt_config_s))
-    //   `uvm_fatal(get_full_name(), "Failed to get agentConfig in virtual sequencer")
+    if(!uvm_config_db#(gfb_config)::get(this, "", "master_seqr_cfg", master_cfg))
+      `uvm_fatal(get_full_name(), "Failed to get master gfb_config in virtual sequencer")
+    if(!uvm_config_db#(gfb_config)::get(this, "", "master_seqr_cfg", slave_cfg))
+      `uvm_fatal(get_full_name(), "Failed to get slve gfb_config in virtual sequencer")
+
+
   endfunction: build_phase
   
 

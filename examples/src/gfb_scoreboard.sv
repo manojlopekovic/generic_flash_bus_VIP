@@ -6,7 +6,7 @@ Notes         :
 Date          : 18.03.2023.
 -----------------------------------------------------------------*/
 
-class gfb_scoreboard extends uvm_scoreboard;
+class gfb_scoreboard#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) extends uvm_scoreboard;
 
   // Config
   // _env_config_class _env_config;
@@ -16,13 +16,13 @@ class gfb_scoreboard extends uvm_scoreboard;
   // Report numbers
 
   // Ports
-  uvm_analysis_export #(gfb_item) masterPort;
-  uvm_tlm_analysis_fifo #(gfb_item) masterFIFO;
-  // uvm_analysis_export #(gfb_item #(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH)) slavePort;
-  // uvm_tlm_analysis_fifo #(gfb_item#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH)) slaveFIFO;
+  uvm_analysis_export #(gfb_item#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH)) masterPort;
+  uvm_tlm_analysis_fifo #(gfb_item#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH)) masterFIFO;
+  uvm_analysis_export #(gfb_item#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH)) slavePort;
+  uvm_tlm_analysis_fifo #(gfb_item#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH)) slaveFIFO;
 
   // Registration
-  `uvm_component_utils(gfb_scoreboard)
+  `uvm_component_param_utils(gfb_scoreboard#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH))
 
   // Constructor
   function new(string name="gfbgfb_scoreboard",uvm_component parent);
@@ -59,15 +59,15 @@ function void gfb_scoreboard::build_phase(uvm_phase phase);
   
   masterPort = new("masterPort", this);
   masterFIFO = new("masterFIFO", this);
-  // slavePort = new("slavePort", this);
-  // slaveFIFO = new("slaveFIFO", this);
+  slavePort = new("slavePort", this);
+  slaveFIFO = new("slaveFIFO", this);
 endfunction: build_phase
 
 
 function void gfb_scoreboard::connect_phase(uvm_phase phase);
   super.connect_phase(phase);
   masterPort.connect(masterFIFO.analysis_export);
-  // slavePort.connect(slaveFIFO.analysis_export);
+  slavePort.connect(slaveFIFO.analysis_export);
 endfunction: connect_phase
 
 

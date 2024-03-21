@@ -6,7 +6,7 @@ Notes         :
 Date          : 18.03.2023.
 -----------------------------------------------------------------*/
 
-class gfb_subscriber extends uvm_subscriber#(gfb_item);
+class gfb_subscriber#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) extends uvm_subscriber#(gfb_item#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH));
 
   // Properties
   gfb_item itemForCoverage;
@@ -17,7 +17,7 @@ class gfb_subscriber extends uvm_subscriber#(gfb_item);
   // Covergroups 
 
   // Registration
-  `uvm_component_utils(gfb_subscriber)
+  `uvm_component_param_utils(gfb_subscriber#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH))
   
   // Constructor
   function new(string name, uvm_component parent);

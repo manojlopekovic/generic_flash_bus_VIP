@@ -6,7 +6,7 @@ Notes         :
 Date          : 18.03.2023.
 -----------------------------------------------------------------*/
 
-class gfb_config extends uvm_object;
+class gfb_config#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) extends uvm_object;
 
   
   // Config parameters
@@ -15,7 +15,7 @@ class gfb_config extends uvm_object;
 
   // Registration 
 
-  `uvm_object_utils_begin(gfb_config)
+  `uvm_object_param_utils_begin(gfb_config#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH))
   `uvm_object_utils_end
 
   // Constructor

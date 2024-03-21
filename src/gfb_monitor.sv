@@ -6,16 +6,16 @@ Notes         :
 Date          : 18.03.2023.
 -----------------------------------------------------------------*/
 
-class gfb_monitor extends uvm_monitor;
+class gfb_monitor#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) extends uvm_monitor;
 
   // Config
-  // _config_class _config;
+  gfb_config cfg;
 
   // Properties
   virtual gfb_interface vif;
 
   // Registration
-  `uvm_component_utils(gfb_monitor)
+  `uvm_component_param_utils(gfb_monitor#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH))
 
   // Components
 
@@ -53,8 +53,9 @@ endclass //gfb_monitor extends uvmgfb_monitor
 function void gfb_monitor::build_phase(uvm_phase phase);
   if(!uvm_config_db#(virtual gfb_interface)::get(this, "", "intf", vif))
     `uvm_fatal(get_type_name(),"Failed to get interface in monitor")
-  // if(!uvm_config_db#(_config_class)::get(this, "", "_config", _config))
-  //   `uvm_fatal(get_full_name(), "Failed to get config in monitor")
+
+  if(!uvm_config_db#(gfb_config)::get(this, "", "monitor_cfg", cfg))
+    `uvm_fatal(get_full_name(), "Failed to get gfb_config in monitor")
 
   
 endfunction: build_phase

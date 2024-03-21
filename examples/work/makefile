@@ -46,3 +46,5 @@ pull:
 	git pull
 push:
 	git push
+status:
+	git status

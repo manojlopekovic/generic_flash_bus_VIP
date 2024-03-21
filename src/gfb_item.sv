@@ -6,7 +6,7 @@ Notes         :
 Date          : 18.03.2023.
 -----------------------------------------------------------------*/
 
-class gfb_item extends uvm_sequence_item;
+class gfb_item#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) extends uvm_sequence_item;
 
   // Random Properties
   rand bit [31:0] data;
@@ -16,7 +16,7 @@ class gfb_item extends uvm_sequence_item;
   // Control knobs
 
   // Registration
-  `uvm_object_utils_begin(gfb_item)
+  `uvm_object_param_utils_begin(gfb_item#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH))
     `uvm_field_int(data, UVM_ALL_ON + UVM_DEC)
   `uvm_object_utils_end
 

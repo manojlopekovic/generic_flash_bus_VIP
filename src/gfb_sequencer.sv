@@ -6,15 +6,15 @@ Notes         :
 Date          : 18.03.2023.
 -----------------------------------------------------------------*/
 
-class gfb_sequencer extends uvm_sequencer#(gfb_item);
+class gfb_sequencer#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) extends uvm_sequencer#(gfb_item#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH));
 
   // Config
-  // _config_class _config;
+  gfb_config cfg;
 
   // Properties
 
   // Registration
-  `uvm_component_utils(gfb_sequencer)
+  `uvm_component_param_utils(gfb_sequencer#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH))
 
   // Ports
   // // Reactive slave ports and FIFO
@@ -45,8 +45,8 @@ endclass //_monitor extends uvm_monitor
 
 
 function void gfb_sequencer::build_phase(uvm_phase phase);
-  // if(!uvm_config_db#(_config_class)::get(this, "", "_config", _config))
-  //   `uvm_fatal(get_full_name(), "Failed to get config in sequencer")
+  if(!uvm_config_db#(gfb_config)::get(this, "", "sequencer_cfg", cfg))
+    `uvm_fatal(get_full_name(), "Failed to get gfb_config in sequencer")
   
 endfunction: build_phase
 

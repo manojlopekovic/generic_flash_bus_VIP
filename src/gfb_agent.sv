@@ -6,15 +6,15 @@ Notes         :
 Date          : 18.03.2023.
 -----------------------------------------------------------------*/
 
-class gfb_agent extends uvm_agent;
+class gfb_agent#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) extends uvm_agent;
 
   // Config
-  // _config_class _config;
+  gfb_config cfg;
 
   // Properties
 
   // Registration
-  `uvm_component_utils(gfb_agent)
+  `uvm_component_param_utils(gfb_agent#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH))
 
   // Components
   gfb_driver driver;
@@ -43,12 +43,17 @@ endclass //gfb_agent extends uvmgfb_agent
 
 
 function void gfb_agent::build_phase(uvm_phase phase);
-  // if(!uvm_config_db#(gfbgfb_agent_config_class)::get(this, "", "_config", _config))
-  //   `uvm_fatal(get_full_name(), "Failed to get config in agent")
+  if(!uvm_config_db#(gfb_config)::get(this, "", "agt_cfg", cfg))
+    `uvm_fatal(get_full_name(), "Failed to get gfb_config in agent")
   
+  uvm_config_db#(gfb_config)::set(this, "monitor", "monitor_cfg", cfg);
   monitor = gfb_monitor::type_id::create("monitor", this);
   subscriber = gfb_subscriber::type_id::create("subscriber", this);
   if(get_is_active() == UVM_ACTIVE) begin 
+    
+    uvm_config_db#(gfb_config)::set(this, "sequencer", "sequencer_cfg", cfg);
+    uvm_config_db#(gfb_config)::set(this, "driver", "driver_cfg", cfg);
+
     sequencer = gfb_sequencer::type_id::create("sequencer", this);
     driver = gfb_driver::type_id::create("driver", this);
   end

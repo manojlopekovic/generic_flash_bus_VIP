@@ -6,16 +6,16 @@ Notes         :
 Date          : 18.03.2023.
 -----------------------------------------------------------------*/
 
-class gfb_driver extends uvm_driver#(gfb_item);
+class gfb_driver#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) extends uvm_driver#(gfb_item#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH));
 
   // Config
-  // _config_class _config;
+  gfb_config cfg;
 
   // Properties
   virtual gfb_interface vif;
 
   // Registration
-  `uvm_component_utils(gfb_driver)
+  `uvm_component_param_utils(gfb_driver#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH))
 
   // Components
 
@@ -44,8 +44,8 @@ function void gfb_driver::build_phase(uvm_phase phase);
   if(!uvm_config_db#(virtual gfb_interface)::get(this, "", "intf", vif))
     `uvm_fatal(get_type_name(),"Failed to get interface in driver")
 
-  // if(!uvm_config_db#(_config_class)::get(this, "", "_config", _config))
-  //   `uvm_fatal(get_full_name(), "Failed to get config in driver")
+  if(!uvm_config_db#(gfb_config)::get(this, "", "driver_cfg", cfg))
+    `uvm_fatal(get_full_name(), "Failed to get gfb_config in driver")
 
   
 endfunction: build_phase
