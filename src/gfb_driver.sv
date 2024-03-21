@@ -6,6 +6,9 @@ Notes         :
 Date          : 18.03.2023.
 -----------------------------------------------------------------*/
 
+`define MASTER_IF vif.master_cb
+`define SLAVE_IF vif.slave_cb
+
 class gfb_driver#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) extends uvm_driver#(gfb_item#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH));
 
   // Config
@@ -60,16 +63,16 @@ task gfb_driver::run_phase(uvm_phase phase);
 endtask: run_phase
 
 task gfb_driver::_standardgfb_driver_operation();
-  @(negedge vif.resetn);
-  @(posedge vif.resetn);
+  @(negedge vif.FRESETn);
+  @(posedge vif.FRESETn);
   forever begin 
     seq_item_port.get_next_item(req);
-    if(vif.resetn == 1'b1) _send_to_if();
+    if(vif.FRESETn == 1'b1) _send_to_if();
     @vif.cb;
     seq_item_port.item_done();
   end
 endtask : _standardgfb_driver_operation
 
 function void gfb_driver::_send_to_if();
-  vif.cb.data <= req.data;
+
 endfunction : _send_to_if

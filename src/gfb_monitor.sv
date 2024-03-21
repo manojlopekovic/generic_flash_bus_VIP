@@ -6,6 +6,9 @@ Notes         :
 Date          : 18.03.2023.
 -----------------------------------------------------------------*/
 
+`define MASTER_IF vif.master_cb
+`define SLAVE_IF vif.slave_cb
+
 class gfb_monitor#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) extends uvm_monitor;
 
   // Config
@@ -74,16 +77,14 @@ task gfb_monitor::gfb_monitorgfb_interface_watcher();
   forever begin 
     temp = new("temp");
     @vif.cb;
-    temp.data = vif.cb.data;
-    `uvm_info(get_full_name(), $sformatf("Item on the interface : \n %s", temp.sprint()), UVM_HIGH)
   end
 endtask: gfb_monitorgfb_interface_watcher
 
 
 task gfb_monitor::gfb_monitor_reset_watcher();
   forever begin 
-    @(negedge vif.resetn);
-    @(posedge vif.resetn);
+    @(negedge vif.FRESETn);
+    @(posedge vif.FRESETn);
     uvm_event_pool::get_global("reset_happened_ev").trigger();
   end
 endtask: gfb_monitor_reset_watcher
