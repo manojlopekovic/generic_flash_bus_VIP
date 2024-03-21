@@ -35,5 +35,14 @@ run_reset_debug :
 run_cov : 
 	@xrun -f ${TRAINING_HOME}/run.f +UVM_TESTNAME=$(test_name) +UVM_VERBOSITY=$(uvm_verbosity) -seed $(rand_seed) +UVM_MAX_QUIT_COUNT=$(quit_count) -coverage all
 
+
+add_commit: add commit
+add_commit_pull: add commit pull
 add:
 	git add ../../.
+commit: 
+	git commit -m "${msg}"
+pull:
+	git pull
+push:
+	git push
