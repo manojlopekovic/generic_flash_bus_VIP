@@ -6,6 +6,8 @@ uvm_verbosity = UVM_LOW
 rand_seed = random
 # quit count for uvm
 quit_count = 1
+# message for git commit
+msg = ""
 
 all: clean run
 all_gui : clean run_gui
@@ -32,3 +34,6 @@ run_reset_debug :
 	@xrun -f ${TRAINING_HOME}/run.f +UVM_TESTNAME=$(test_name) +UVM_VERBOSITY=$(uvm_verbosity) -seed $(rand_seed) +UVM_MAX_QUIT_COUNT=$(quit_count) +define+RST_EN -gui -LINEDEBUG
 run_cov : 
 	@xrun -f ${TRAINING_HOME}/run.f +UVM_TESTNAME=$(test_name) +UVM_VERBOSITY=$(uvm_verbosity) -seed $(rand_seed) +UVM_MAX_QUIT_COUNT=$(quit_count) -coverage all
+
+add:
+	git add ../../.
