@@ -37,7 +37,6 @@ endfunction: build_phase
 
 task simple_rep_test::run_phase(uvm_phase phase);
   gfb_virt_seq v_seq;
-  bit[7:0] temp = 8'b10101010;
   super.run_phase(phase);
   v_seq = gfb_virt_seq::type_id::create("v_seq");
   phase.raise_objection(this);
@@ -47,11 +46,7 @@ task simple_rep_test::run_phase(uvm_phase phase);
   `uvm_info(get_full_name(), "Initial reset happened", UVM_NONE)
   
 
-  // repeat(5) begin 
-  //   v_seq.start(env.virt_seqr);
-  // end
-  for(int i = 7; i >= 0; i--)
-  `uvm_warning(get_full_name(), $sformatf("temp[%0d] = %b", i, temp[i]))
+  v_seq.start(env.virt_seqr);
   
 
   phase.drop_objection(this);

@@ -25,7 +25,7 @@ run :
 run_gui : 
 	@xrun -f ${TRAINING_HOME}/run.f +UVM_TESTNAME=$(test_name) +UVM_VERBOSITY=$(uvm_verbosity) -seed $(rand_seed) +UVM_MAX_QUIT_COUNT=$(quit_count) -gui
 run_debug : 
-	@xrun -f ${TRAINING_HOME}/run.f +UVM_TESTNAME=$(test_name) +UVM_VERBOSITY=$(uvm_verbosity) -seed $(rand_seed) +UVM_MAX_QUIT_COUNT=$(quit_count) -gui - LINEDEBUG
+	@xrun -f ${TRAINING_HOME}/run.f +UVM_TESTNAME=$(test_name) +UVM_VERBOSITY=$(uvm_verbosity) -seed $(rand_seed) +UVM_MAX_QUIT_COUNT=$(quit_count) -gui -LINEDEBUG
 run_reset : 
 	@xrun -f ${TRAINING_HOME}/run.f +UVM_TESTNAME=$(test_name) +UVM_VERBOSITY=$(uvm_verbosity) -seed $(rand_seed) +UVM_MAX_QUIT_COUNT=$(quit_count) +define+RST_EN
 run_reset_gui : 

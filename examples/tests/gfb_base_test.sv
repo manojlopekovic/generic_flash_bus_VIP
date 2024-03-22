@@ -44,10 +44,11 @@ function void base_test::build_phase(uvm_phase phase);
 
   modify_master_cfg();
   // modify_slave_cfg();
-  $cast(slave_cfg, master_cfg.clone());
+  // $cast(slave_cfg, master_cfg.clone());
+  slave_cfg.copy(master_cfg);
   slave_cfg.agent_type = gfb_config::SLAVE;
 
-  `uvm_info("CFG_PRINT", $sformatf("BASE TEST: M_CFG : \n %s \n S_CFG: \n %s", master_cfg.sprint(), slave_cfg.sprint()), UVM_NONE)
+  `uvm_info("CFG_PRINT", $sformatf("BASE TEST: \nM_CFG : \n %s \nS_CFG: \n %s", master_cfg.sprint(), slave_cfg.sprint()), UVM_NONE)
   uvm_config_db#(gfb_config)::set(this, "env", "master_cfg", master_cfg);
   uvm_config_db#(gfb_config)::set(this, "env", "slave_cfg", slave_cfg);
   
@@ -71,7 +72,7 @@ endfunction
 
 
 function void  base_test::modify_slave_cfg();
-  master_cfg.randomize() with {
+  slave_cfg.randomize() with {
     agent_type == gfb_config::SLAVE;
   };
 endfunction

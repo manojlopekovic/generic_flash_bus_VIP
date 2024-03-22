@@ -47,8 +47,8 @@ class gfb_monitor#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) extends u
   // Functions
 
   // Tasks
-  extern task gfb_monitorgfb_interface_watcher();
-  extern task gfb_monitor_reset_watcher();
+  extern task interface_watcher();
+  extern task reset_watcher();
 
 endclass //gfb_monitor extends uvmgfb_monitor
 
@@ -66,25 +66,25 @@ endfunction: build_phase
 
 task gfb_monitor::run_phase(uvm_phase phase);
   fork
-    gfb_monitorgfb_interface_watcher();
-    gfb_monitor_reset_watcher();
+    interface_watcher();
+    reset_watcher();
   join
 endtask: run_phase
 
 
-task gfb_monitor::gfb_monitorgfb_interface_watcher();
+task gfb_monitor::interface_watcher();
   gfb_item temp;
   forever begin 
     temp = new("temp");
     @vif.cb;
   end
-endtask: gfb_monitorgfb_interface_watcher
+endtask: interface_watcher
 
 
-task gfb_monitor::gfb_monitor_reset_watcher();
+task gfb_monitor::reset_watcher();
   forever begin 
     @(negedge vif.FRESETn);
     @(posedge vif.FRESETn);
     uvm_event_pool::get_global("reset_happened_ev").trigger();
   end
-endtask: gfb_monitor_reset_watcher
+endtask: reset_watcher

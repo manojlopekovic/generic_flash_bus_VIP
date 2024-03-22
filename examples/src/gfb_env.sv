@@ -41,9 +41,9 @@ class gfb_env#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) extends uvm_e
 endclass: gfb_env
 
 function void gfb_env::build_phase(uvm_phase phase);
-  if(!uvm_config_db#(gfb_config)::get(this, "", "slave_cfg", master_cfg))
+  if(!uvm_config_db#(gfb_config)::get(this, "", "master_cfg", master_cfg))
     `uvm_fatal(get_full_name(), "Failed to get gfb_config in env")
-  if(!uvm_config_db#(gfb_config)::get(this, "", "master_cfg", slave_cfg))
+  if(!uvm_config_db#(gfb_config)::get(this, "", "slave_cfg", slave_cfg))
     `uvm_fatal(get_full_name(), "Failed to get gfb_config in env")
 
   uvm_config_db#(gfb_config)::set(this, "slave_agent", "agt_cfg", slave_cfg);

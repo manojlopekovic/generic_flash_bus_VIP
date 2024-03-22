@@ -29,8 +29,8 @@ class gfb_virt_seqr#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) extends
   function void build_phase(uvm_phase phase);
     if(!uvm_config_db#(gfb_config)::get(this, "", "master_seqr_cfg", master_cfg))
       `uvm_fatal(get_full_name(), "Failed to get master gfb_config in virtual sequencer")
-    if(!uvm_config_db#(gfb_config)::get(this, "", "master_seqr_cfg", slave_cfg))
-      `uvm_fatal(get_full_name(), "Failed to get slve gfb_config in virtual sequencer")
+    if(!uvm_config_db#(gfb_config)::get(this, "", "slave_seqr_cfg", slave_cfg))
+      `uvm_fatal(get_full_name(), "Failed to get slave gfb_config in virtual sequencer")
 
 
   endfunction: build_phase
