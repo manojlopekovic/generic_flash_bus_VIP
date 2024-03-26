@@ -64,6 +64,7 @@ class gfb_driver#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) extends uv
   // Slave
   extern virtual task slave_send_to_if();
   extern virtual function void slave_drive_init();
+  extern virtual task slave_handle_seq();
 
   // Tasks
   extern virtual task std_driver_op();
@@ -103,7 +104,7 @@ task gfb_driver::std_driver_op();
   if(`AGT_TYPE == `MASTER_TYPE) 
     master_send_to_if();
   else 
-    slave_send_to_if();
+    slave_handle_seq();
 endtask : std_driver_op
 
 // MASTER OP
@@ -189,19 +190,28 @@ endfunction : master_drive_init
 
 // SLAVE OP
 // ********************************************************************************************
+task gfb_driver::slave_handle_seq();
+  forever begin 
+    wait(`RESETn == 1'b1);
+    seq_item_port.get_next_item(req);
+    if(`RESETn == 1'b1) begin
+      slave_send_to_if();
+    end
+    seq_item_port.item_done();
+  end
+endtask
+
 
 task gfb_driver::slave_send_to_if();
-  forever begin
-    int wait_size;
-    `SLAVE_IF.FREADY <= 0;
-    std::randomize(wait_size) with { wait_size inside {[0:10]}; };
-    repeat(wait_size) @`SLAVE_IF;
-    `SLAVE_IF.FREADY <= 1;
-    @`SLAVE_IF;
-    `SLAVE_IF.FREADY <= 0;
-    repeat(wait_size) @`SLAVE_IF;
-    `SLAVE_IF.FREADY <= 1;
-  end
+  int wait_size;
+  `SLAVE_IF.FREADY <= 0;
+  std::randomize(wait_size) with { wait_size inside {[0:10]}; };
+  repeat(wait_size) @`SLAVE_IF;
+  `SLAVE_IF.FREADY <= 1;
+  @`SLAVE_IF;
+  `SLAVE_IF.FREADY <= 0;
+  repeat(wait_size) @`SLAVE_IF;
+  `SLAVE_IF.FREADY <= 1;
 endtask : slave_send_to_if
 
 

@@ -34,8 +34,8 @@ class gfb_virt_seq#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) extends 
   task body();
     fork
       seq_slave();
-      seq_master();
-    join
+    join_none
+    seq_master();
   endtask: body
 endclass //gfb_virt_seq extends uvm_sequence
 
@@ -43,7 +43,7 @@ endclass //gfb_virt_seq extends uvm_sequence
 task gfb_virt_seq::seq_slave();
   slave_simple_rep = simple_rep_seq::type_id::create("slave_simple_rep");
   slave_simple_rep.randomize() with {
-    numRep inside {[0:10]};
+    numRep inside {[1:10]};
   };
   slave_simple_rep.start(p_sequencer.slave_sequencer);
 endtask
@@ -52,7 +52,7 @@ endtask
 task gfb_virt_seq::seq_master();
   master_simple_rep = simple_rep_seq::type_id::create("master_simple_rep");
   master_simple_rep.randomize() with {
-    numRep inside {[0:10]};
+    numRep inside {[1:10]};
   };
   master_simple_rep.start(p_sequencer.master_sequencer);
 endtask
