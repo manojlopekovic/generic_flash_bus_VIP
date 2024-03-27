@@ -6,7 +6,7 @@ Notes         :
 Date          : 18.03.2023.
 -----------------------------------------------------------------*/
 
-class base_seq#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) extends uvm_sequence#(gfb_item);
+class base_seq#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) extends uvm_sequence#(gfb_item#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH));
 
   // Properties
 

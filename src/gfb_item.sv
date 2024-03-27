@@ -9,16 +9,24 @@ Date          : 18.03.2023.
 class gfb_item#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) extends uvm_sequence_item;
 
   // Interface properties
+  rand gfb_config::t_AgtType it_type;
+
   // Master properties
   rand bit [ADDR_WIDTH-1:0] FADDR;
   rand gfb_config::t_CommandType FCMD;
   rand bit [WRITE_WIDTH-1:0] FWDATA;
-  rand gfb_config::t_Abort FABORT;
+  rand bit abort_happening = '0;
+  rand int unsigned abort_after;
+  rand bit burst_happening = '0;
+  rand int unsigned burst_size;
+
 
   // Slave properties
   rand bit [READ_WIDTH-1:0] FRDATA;
-  rand gfb_config::t_Ready FREADY;
-  rand gfb_config::t_Resp FRESP;
+  rand bit error_happening ='0;
+  rand int unsigned error_after;
+  rand bit wait_happening = '0;
+  rand int unsigned wait_states;
 
   // Non-random properties
 
@@ -29,10 +37,15 @@ class gfb_item#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) extends uvm_
     `uvm_field_int(FADDR, UVM_ALL_ON)
     `uvm_field_enum(gfb_config::t_CommandType, FCMD, UVM_ALL_ON)
     `uvm_field_int(FWDATA, UVM_ALL_ON)
-    `uvm_field_enum(gfb_config::t_Abort, FABORT, UVM_ALL_ON)
+    `uvm_field_int(abort_happening, UVM_ALL_ON)
+    `uvm_field_int(abort_after, UVM_ALL_ON)
+    `uvm_field_int(burst_happening, UVM_ALL_ON)
+    `uvm_field_int(burst_size, UVM_ALL_ON)
     `uvm_field_int(FRDATA, UVM_ALL_ON)
-    `uvm_field_enum(gfb_config::t_Ready, FREADY, UVM_ALL_ON)
-    `uvm_field_enum(gfb_config::t_Resp, FRESP, UVM_ALL_ON)
+    `uvm_field_int(error_happening, UVM_ALL_ON)
+    `uvm_field_int(error_after, UVM_ALL_ON)
+    `uvm_field_int(wait_happening, UVM_ALL_ON)
+    `uvm_field_int(wait_states, UVM_ALL_ON)
   `uvm_object_utils_end
 
   // Components
@@ -43,6 +56,35 @@ class gfb_item#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) extends uvm_
   endfunction : new
 
   // Constraints
+  constraint master_constr {
+    /*  solve order constraints  */
+  
+    /*  rand variable constraints  */
+    if(it_type == gfb_config::MASTER){
+      FRDATA == '0;
+      error_happening == '0;
+      error_after == '0;
+      wait_happening == '0;
+      wait_states == '0;
+    }
+  }
+
+  constraint slave_constr {
+    /*  solve order constraints  */
+  
+    /*  rand variable constraints  */
+    if(it_type == gfb_config::SLAVE){
+      FADDR == '0;
+      FCMD == '0;
+      FWDATA == '0;
+      abort_happening == '0;
+      abort_after == '0;
+      burst_happening == '0;
+      burst_size == '0;
+    }
+  }
+  
+  
 
   // Functions
   function void post_randomize();
