@@ -15,17 +15,17 @@ class gfb_item#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) extends uvm_
   rand bit [ADDR_WIDTH-1:0] FADDR;
   rand gfb_config::t_CommandType FCMD;
   rand bit [WRITE_WIDTH-1:0] FWDATA;
-  rand bit abort_happening = '0;
+  rand bit abort_happening;
   rand int unsigned abort_after;
-  rand bit burst_happening = '0;
+  rand bit burst_happening;
   rand int unsigned burst_size;
 
 
   // Slave properties
   rand bit [READ_WIDTH-1:0] FRDATA;
-  rand bit error_happening ='0;
+  rand bit error_happening;
   rand int unsigned error_after;
-  rand bit wait_happening = '0;
+  rand bit wait_happening;
   rand int unsigned wait_states;
 
   // Non-random properties
@@ -67,6 +67,10 @@ class gfb_item#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) extends uvm_
       wait_happening == '0;
       wait_states == '0;
     }
+    if(abort_happening == 0){
+      abort_after == 0;
+    }
+    abort_after >= 0;
   }
 
   constraint slave_constr {
@@ -82,6 +86,14 @@ class gfb_item#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) extends uvm_
       burst_happening == '0;
       burst_size == '0;
     }
+    if(error_happening == 0){
+      error_after == 0;
+    }
+    if(wait_happening == 0){
+      wait_states == 0;
+    }
+    error_after >= 0;
+    wait_states >= 0;
   }
   
   

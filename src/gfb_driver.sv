@@ -135,6 +135,7 @@ task gfb_driver::master_handle_addr_phase();
   forever begin 
     wait(`RESETn == 1'b1);
     seq_item_port.get_next_item(req);
+    `uvm_info("M_DRV_REC", $sformatf("Master driver recieved item: %s\n", req.sprint()), UVM_HIGH)
     if(`RESETn == 1'b1) begin
       master_drive_addr_phase();
     end
@@ -194,6 +195,7 @@ task gfb_driver::slave_handle_seq();
   forever begin 
     wait(`RESETn == 1'b1);
     seq_item_port.get_next_item(req);
+    `uvm_info("S_DRV_REC", $sformatf("Slave driver recieved item: %s\n", req.sprint()), UVM_HIGH)
     if(`RESETn == 1'b1) begin
       slave_send_to_if();
     end
@@ -203,15 +205,19 @@ endtask
 
 
 task gfb_driver::slave_send_to_if();
-  int wait_size;
   `SLAVE_IF.FREADY <= 0;
-  std::randomize(wait_size) with { wait_size inside {[0:10]}; };
-  repeat(wait_size) @`SLAVE_IF;
+  repeat(req.wait_states) @`CLK_BLK;
   `SLAVE_IF.FREADY <= 1;
-  @`SLAVE_IF;
-  `SLAVE_IF.FREADY <= 0;
-  repeat(wait_size) @`SLAVE_IF;
-  `SLAVE_IF.FREADY <= 1;
+  @`CLK_BLK;
+  // int wait_size;
+  // `SLAVE_IF.FREADY <= 0;
+  // std::randomize(wait_size) with { wait_size inside {[0:10]}; };
+  // repeat(wait_size) @`SLAVE_IF;
+  // `SLAVE_IF.FREADY <= 1;
+  // @`SLAVE_IF;
+  // `SLAVE_IF.FREADY <= 0;
+  // repeat(wait_size) @`SLAVE_IF;
+  // `SLAVE_IF.FREADY <= 1;
 endtask : slave_send_to_if
 
 
