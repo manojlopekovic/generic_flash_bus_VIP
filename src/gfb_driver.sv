@@ -171,6 +171,9 @@ task gfb_driver::master_drive_data_phase();
   // drive data to interface
       // this data will be write data, but also abort
   uvm_event_pool::get_global("driver_transaction_exit_case").wait_trigger();
+  rsp = gfb_item#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH)::type_id::create("rsp");
+  rsp.set_id_info(req);
+  seq_item_port.put(rsp);
 endtask
 
 
