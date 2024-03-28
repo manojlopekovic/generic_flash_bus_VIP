@@ -8,6 +8,8 @@ Date          : 18.03.2023.
 
 class gfb_item#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) extends uvm_sequence_item;
 
+  typedef enum {ADDR_PHASE, DATA_PHASE, COLLECTED} t_ItemState;
+
   // Interface properties
   rand gfb_config::t_AgtType it_type;
 
@@ -30,10 +32,12 @@ class gfb_item#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) extends uvm_
 
   // Non-random properties
 
-  // Control properties
+  // Monitor properties
+  t_ItemState item_state = ADDR_PHASE;
 
   // Registration
   `uvm_object_param_utils_begin(gfb_item#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH))
+    `uvm_field_enum(t_ItemState, item_state, UVM_ALL_ON)
     `uvm_field_int(FADDR, UVM_ALL_ON)
     `uvm_field_enum(gfb_config::t_CommandType, FCMD, UVM_ALL_ON)
     `uvm_field_int(FWDATA, UVM_ALL_ON)

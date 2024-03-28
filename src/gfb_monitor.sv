@@ -6,8 +6,7 @@ Notes         :
 Date          : 18.03.2023.
 -----------------------------------------------------------------*/
 
-`define MASTER_IF vif.master_cb
-`define SLAVE_IF vif.slave_cb
+
 
 class gfb_monitor#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) extends uvm_monitor;
 
@@ -16,6 +15,12 @@ class gfb_monitor#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) extends u
 
   // Properties
   virtual gfb_interface vif;
+  gfb_item#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH) addr_phase_item;
+  gfb_item#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH) data_phase_item;
+  
+  semaphore phase_mutex;
+
+  event monitor_transaction_exit_case;
 
   // Registration
   `uvm_component_param_utils(gfb_monitor#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH))
@@ -35,6 +40,7 @@ class gfb_monitor#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) extends u
     super.new(name, parent);
     // command_port = new("command_port", this);
     transaction_port = new("transaction_port", this);
+    phase_mutex = new(0);
   endfunction //new()
 
   // Phases
@@ -47,8 +53,14 @@ class gfb_monitor#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) extends u
   // Functions
 
   // Tasks
-  extern task interface_watcher();
-  extern task reset_watcher();
+  // item collecting
+  extern virtual task collect_item();
+  extern virtual task collect_addr_phase();
+  extern virtual task collect_data_phase();
+  extern virtual task monitor_wait_exit_cases();
+  extern virtual task reset_watcher();
+
+  // Protocol checkers
 
 endclass //gfb_monitor extends uvmgfb_monitor
 
@@ -65,20 +77,67 @@ endfunction: build_phase
 
 
 task gfb_monitor::run_phase(uvm_phase phase);
+  
   fork
-    interface_watcher();
+    collect_item();
     reset_watcher();
   join
 endtask: run_phase
 
 
-task gfb_monitor::interface_watcher();
-  gfb_item temp;
+task gfb_monitor::collect_item();
+  @(negedge `RESETn);
+  @(posedge `RESETn);
+  
+  fork
+    collect_data_phase();
+    monitor_wait_exit_cases();
+  join_none
   forever begin 
-    temp = new("temp");
-    @vif.cb;
+    collect_addr_phase();
   end
-endtask: interface_watcher
+endtask: collect_item
+
+
+task gfb_monitor::collect_addr_phase();
+  // uvm_event_pool::get_global("monitor_transaction_exit_case").wait_trigger();
+  @(monitor_transaction_exit_case);
+  addr_phase_item = gfb_item#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH)::type_id::create("addr_phase_item");
+  addr_phase_item.FADDR = `CLK_BLK.FADDR;
+  addr_phase_item.FCMD = `CLK_BLK.FCMD;
+
+  data_phase_item = gfb_item#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH)::type_id::create("data_phase_item");
+  data_phase_item.copy(addr_phase_item);
+  data_phase_item.item_state = gfb_item::DATA_PHASE;
+  // Todo : add check how the item ended
+  phase_mutex.put(1);
+endtask: collect_addr_phase
+
+
+task gfb_monitor::collect_data_phase();
+  forever begin 
+    phase_mutex.get(1);
+    // uvm_event_pool::get_global("monitor_transaction_exit_case").wait_trigger();
+    @(monitor_transaction_exit_case);
+    data_phase_item.FRDATA = `CLK_BLK.FRDATA;
+    data_phase_item.FWDATA = `CLK_BLK.FWDATA;
+    // Todo : add check how the item ended
+    data_phase_item.item_state = gfb_item::COLLECTED;
+    `uvm_info("MONCOL", $sformatf("%s monitor collected item:\n%s", cfg.agent_type.name(), data_phase_item.sprint()), UVM_MEDIUM)
+    
+    // Todo : write to transaction port
+  end
+endtask: collect_data_phase
+
+
+task gfb_monitor::monitor_wait_exit_cases();
+  forever begin 
+    if(`CLK_BLK.FREADY !== '1)
+      @(posedge `CLK_BLK.FREADY);
+    -> monitor_transaction_exit_case;
+    @`CLK_BLK;
+  end
+endtask: collect_data_phase
 
 
 task gfb_monitor::reset_watcher();
