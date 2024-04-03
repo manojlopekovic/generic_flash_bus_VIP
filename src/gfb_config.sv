@@ -43,12 +43,14 @@ class gfb_config#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) extends uv
   rand int unsigned max_waits_for_abort;
 
   // #### SLAVE ####
+  // Todo : add unsupported commands to configuration -> Slave will answer with error to them
   rand bit slave_error_en = '1;
   rand int unsigned slave_error_rate;
   rand bit slave_wait_state_en = '1;
   rand int unsigned max_wait_states_allowed;
   rand int unsigned slave_wait_state_rate;
   rand bit mem_model_exists = '1;
+  
 
   // endianesss
 

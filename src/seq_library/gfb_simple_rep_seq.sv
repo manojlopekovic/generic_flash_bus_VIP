@@ -67,7 +67,7 @@ task simple_rep_seq::drive_seq();
       } else if(it_type == gfb_config::SLAVE){
         if(p_sequencer.cfg.slave_error_en == 1){
           error_happening dist {1:= p_sequencer.cfg.slave_error_rate, 0 := (100 - p_sequencer.cfg.slave_error_rate)};
-          abort_after inside {[0:p_sequencer.cfg.max_wait_states_allowed]};
+          error_after inside {[0:p_sequencer.cfg.max_wait_states_allowed]};
         } else {
           error_happening == '0;
         }

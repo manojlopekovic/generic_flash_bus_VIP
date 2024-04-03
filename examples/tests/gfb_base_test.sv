@@ -68,7 +68,9 @@ function void base_test::modify_master_cfg();
   master_cfg.randomize() with {
     agent_type == gfb_config::MASTER;
     slave_wait_state_en == '1;
-    slave_wait_state_rate == 100;
+    slave_wait_state_rate == 50;
+    slave_error_en == '1;
+    slave_error_rate == 30;
   };
 endfunction
 

@@ -5,6 +5,8 @@ Notes         :
               : Set $UVMHOME to install directory of UVM library
 -------------------------------------------------------------------
 -----------------------------------------------------------------*/
+
+-timescale 1us/1ns
 // 64 bit option for AWS labs
 -access +rwc
 -disable_sem2009

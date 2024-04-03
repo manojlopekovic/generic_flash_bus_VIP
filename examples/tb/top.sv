@@ -33,11 +33,11 @@ module top;
   end
 
 
-  initial begin 
-    // uvm_event_pool::get_global("test_started").wait_trigger();
+  // initial begin 
+  //   // uvm_event_pool::get_global("test_started").wait_trigger();
 
-    #50000000;
-    `uvm_fatal("TOP", "END OF SIMULAION")
-  end
+  //   #50000000;
+  //   `uvm_fatal("TOP", "END OF SIMULAION")
+  // end
 
 endmodule : top

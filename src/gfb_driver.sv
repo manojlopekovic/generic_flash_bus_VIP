@@ -23,6 +23,7 @@ class gfb_driver#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) extends uv
   semaphore phase_mutex;
 
   // Slave helper fields
+  bit item_in_data_phase = 0;
 
   // Registration
   `uvm_component_param_utils(gfb_driver#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH))
@@ -115,8 +116,15 @@ endtask : master_send_to_if
 
 task gfb_driver::master_wait_driver_transaction_exit_case();
   forever begin 
-    if(`MASTER_IF.FREADY !== '1)
-      @(posedge `MASTER_IF.FREADY);
+    if(`MASTER_IF.FREADY !== '1) begin 
+      if(`MASTER_IF.FRESP !== '1) begin 
+        fork
+          @(posedge `MASTER_IF.FRESP);
+          @(posedge `MASTER_IF.FREADY);
+        join_any
+        disable fork;
+      end
+    end
     uvm_event_pool::get_global("driver_transaction_exit_case").trigger();
     @`CLK_BLK;
   end
@@ -159,17 +167,11 @@ task gfb_driver::master_handle_data_phase();
     phase_mutex.get(1);
     master_drive_data_phase();
   end
-  // forever looped
-    // wait for blocking fifo -> when address phase is finished
-    // master_drive_data_phase()
-    // wait for event, blocking <- signal from exit case function
 endtask
 
 
 task gfb_driver::master_drive_data_phase();
   `MASTER_IF.FWDATA <= data_phase_item.FWDATA;
-  // drive data to interface
-      // this data will be write data, but also abort
   uvm_event_pool::get_global("driver_transaction_exit_case").wait_trigger();
   rsp = gfb_item#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH)::type_id::create("rsp");
   rsp.set_id_info(req);
@@ -203,18 +205,22 @@ endtask
 
 task gfb_driver::slave_send_to_if();
   `SLAVE_IF.FREADY <= 0;
-  repeat(req.wait_states) @`CLK_BLK;
+  `SLAVE_IF.FRESP <= 0;
+
+  if(item_in_data_phase && req.error_happening) begin 
+    repeat(req.error_after) @`CLK_BLK;
+    `SLAVE_IF.FRESP <= 1;
+    @`CLK_BLK;
+  end else begin 
+    repeat(req.wait_states) @`CLK_BLK;
+  end
   `SLAVE_IF.FREADY <= 1;
+  item_in_data_phase = 0;
   @`CLK_BLK;
-  // int wait_size;
-  // `SLAVE_IF.FREADY <= 0;
-  // std::randomize(wait_size) with { wait_size inside {[0:10]}; };
-  // repeat(wait_size) @`SLAVE_IF;
-  // `SLAVE_IF.FREADY <= 1;
-  // @`SLAVE_IF;
-  // `SLAVE_IF.FREADY <= 0;
-  // repeat(wait_size) @`SLAVE_IF;
-  // `SLAVE_IF.FREADY <= 1;
+  if(`SLAVE_IF.FCMD != gfb_config::IDLE)
+    item_in_data_phase = 1;
+  else 
+    item_in_data_phase = 0;
 endtask : slave_send_to_if
 
 

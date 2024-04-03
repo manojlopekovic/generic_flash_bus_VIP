@@ -19,6 +19,7 @@ class gfb_monitor#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) extends u
   gfb_item#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH) data_phase_item;
   
   semaphore phase_mutex;
+  semaphore data_mutex;
 
   event monitor_transaction_exit_case;
 
@@ -41,6 +42,7 @@ class gfb_monitor#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) extends u
     // command_port = new("command_port", this);
     transaction_port = new("transaction_port", this);
     phase_mutex = new(0);
+    data_mutex = new(0);
   endfunction //new()
 
   // Phases
@@ -102,10 +104,16 @@ endtask: collect_item
 task gfb_monitor::collect_addr_phase();
   // uvm_event_pool::get_global("monitor_transaction_exit_case").wait_trigger();
   @(monitor_transaction_exit_case);
+  if(data_phase_item != null)
+    data_mutex.get(1);
+  if(addr_phase_item != null && addr_phase_item.FCMD != gfb_config::IDLE) begin
+    addr_phase_item.item_state = gfb_item::ERROR_ADDR;
+    `uvm_info("MONCOL", $sformatf("%s monitor address phase errored item:\n%s", cfg.agent_type.name(), addr_phase_item.sprint()), UVM_MEDIUM)
+  end
+  // Todo : write this item to port
   addr_phase_item = gfb_item#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH)::type_id::create("addr_phase_item");
   addr_phase_item.FADDR = `CLK_BLK.FADDR;
   addr_phase_item.FCMD = `CLK_BLK.FCMD;
-
   data_phase_item = gfb_item#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH)::type_id::create("data_phase_item");
   data_phase_item.copy(addr_phase_item);
   data_phase_item.item_state = gfb_item::DATA_PHASE;
@@ -122,18 +130,29 @@ task gfb_monitor::collect_data_phase();
     data_phase_item.FRDATA = `CLK_BLK.FRDATA;
     data_phase_item.FWDATA = `CLK_BLK.FWDATA;
     // Todo : add check how the item ended
-    data_phase_item.item_state = gfb_item::COLLECTED;
+    if(`CLK_BLK.FRESP === 1) begin
+      data_phase_item.item_state = gfb_item::ERROR_DATA;
+    end else 
+      data_phase_item.item_state = gfb_item::COLLECTED_OK;
     `uvm_info("MONCOL", $sformatf("%s monitor collected item:\n%s", cfg.agent_type.name(), data_phase_item.sprint()), UVM_MEDIUM)
-    
     // Todo : write to transaction port
+    data_phase_item = null;
+      data_mutex.put(1);
   end
 endtask: collect_data_phase
 
 
 task gfb_monitor::monitor_wait_exit_cases();
   forever begin 
-    if(`CLK_BLK.FREADY !== '1)
-      @(posedge `CLK_BLK.FREADY);
+    if(`CLK_BLK.FREADY !== '1) begin
+      if(`CLK_BLK.FRESP !== 1) begin 
+        fork
+          @(posedge `CLK_BLK.FREADY);
+          @(posedge `CLK_BLK.FRESP);
+        join_any
+        disable fork;
+      end
+    end
     -> monitor_transaction_exit_case;
     @`CLK_BLK;
   end
