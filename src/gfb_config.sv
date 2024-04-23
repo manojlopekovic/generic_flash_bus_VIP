@@ -102,6 +102,7 @@ class gfb_config#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) extends uv
     slave_error_rate inside {[0:100]};
     slave_wait_state_rate inside {[0:100]};
     soft max_wait_states_allowed == 1024;
+    soft mem_model_exists == 1;
   }
 
   constraint base_master {

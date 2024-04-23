@@ -64,9 +64,10 @@ endfunction: build_phase
 
 function void gfb_agent::connect_phase(uvm_phase phase);
   super.connect_phase(phase);
+  if(cfg.agent_type == gfb_config::SLAVE)
+    monitor.command_port.connect(sequencer.command_export);
   if(get_is_active() == UVM_ACTIVE) begin 
     driver.seq_item_port.connect(sequencer.seq_item_export);
-    // monitor.command_port.connect(sequencer.command_export);
     monitor.transaction_port.connect(subscriber.analysis_export);
   end
   

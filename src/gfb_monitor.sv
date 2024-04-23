@@ -7,7 +7,6 @@ Date          : 18.03.2023.
 -----------------------------------------------------------------*/
 
 
-
 class gfb_monitor#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) extends uvm_monitor;
 
   // Config
@@ -31,7 +30,8 @@ class gfb_monitor#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) extends u
   // Ports
 
   // // Reactive slave port
-  // uvm_analysis_port #(gfbgfb_item#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH)) command_port;
+  uvm_analysis_port #(gfb_item#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH)) command_port;
+  gfb_item#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH) slave_item;
 
   // Transaction collector port
   uvm_analysis_port #(gfb_item) transaction_port;
@@ -39,7 +39,6 @@ class gfb_monitor#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) extends u
   // Constructor
   function new(string name, uvm_component parent);
     super.new(name, parent);
-    // command_port = new("command_port", this);
     transaction_port = new("transaction_port", this);
     phase_mutex = new(0);
     data_mutex = new(0);
@@ -62,9 +61,13 @@ class gfb_monitor#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) extends u
   extern virtual task monitor_wait_exit_cases();
   extern virtual task reset_watcher();
 
+  // Reactive slave
+  extern virtual task handle_reactive_slave();
+  extern virtual task handle_reactive_command(gfb_item it);
+
   // Protocol checkers
 
-endclass //gfb_monitor extends uvmgfb_monitor
+endclass //gfb_monitor extends uvm_monitor
 
 
 function void gfb_monitor::build_phase(uvm_phase phase);
@@ -73,8 +76,9 @@ function void gfb_monitor::build_phase(uvm_phase phase);
 
   if(!uvm_config_db#(gfb_config)::get(this, "", "monitor_cfg", cfg))
     `uvm_fatal(get_full_name(), "Failed to get gfb_config in monitor")
-
   
+  if(cfg.agent_type == gfb_config::SLAVE)
+    command_port = new("command_port", this);
 endfunction: build_phase
 
 
@@ -94,6 +98,8 @@ task gfb_monitor::collect_item();
   fork
     collect_data_phase();
     monitor_wait_exit_cases();
+    if(cfg.agent_type == gfb_config::SLAVE)
+      handle_reactive_slave();
   join_none
   forever begin 
     collect_addr_phase();
@@ -168,3 +174,51 @@ task gfb_monitor::reset_watcher();
     uvm_event_pool::get_global("reset_happened_ev").trigger();
   end
 endtask: reset_watcher
+
+
+// SLAVE
+
+task gfb_monitor::handle_reactive_slave();
+  forever begin 
+    slave_item = gfb_item#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH)::type_id::create("slave_item");
+    slave_item.FCMD = `SLAVE_IF.FCMD;
+    slave_item.FADDR = `SLAVE_IF.FADDR;
+    slave_item.it_type = gfb_config::SLAVE;
+    command_port.write(slave_item);
+    fork
+      @(`SLAVE_IF.FCMD);
+      begin
+        @(monitor_transaction_exit_case);
+        @`CLK_BLK;
+      end
+    join_any
+    disable fork;
+    if(slave_item.FCMD != gfb_config::IDLE) begin
+      fork
+        handle_reactive_command(slave_item);
+      join_none
+    end
+  end
+endtask
+
+
+task gfb_monitor::handle_reactive_command(gfb_item it);
+  gfb_item#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH) temp = new("temp");
+  temp.copy(it);
+  if(`SLAVE_IF.FREADY == 1) begin 
+    @(monitor_transaction_exit_case);
+    if(`SLAVE_IF.FREADY == 1) begin 
+      case(temp.FCMD)
+        gfb_config::WRITE, gfb_config::ROW_WRITE : begin 
+
+        end
+        gfb_config::ERASE : begin 
+
+        end
+        gfb_config::MASS_ERASE : begin 
+
+        end
+      endcase
+    end
+  end
+endtask

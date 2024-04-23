@@ -18,16 +18,14 @@ class gfb_sequencer#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) extends
 
   // Ports
   // // Reactive slave ports and FIFO
-  // uvm_analysis_export #(gfb_item#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH)) command_export;
-  // uvm_tlm_analysis_fifo #(gfb_item#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH)) command_fifo;
+  uvm_analysis_export #(gfb_item#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH)) command_export;
+  uvm_tlm_analysis_fifo #(gfb_item#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH)) command_fifo;
 
   // Components
 
   // Constructor
   function new(string name, uvm_component parent);
     super.new(name, parent);
-    // command_fifo = new("command_fifo", this);
-    // command_export = new("command_export", this);
   endfunction //new()
 
   // Phases
@@ -47,14 +45,19 @@ endclass //_monitor extends uvm_monitor
 function void gfb_sequencer::build_phase(uvm_phase phase);
   if(!uvm_config_db#(gfb_config)::get(this, "", "sequencer_cfg", cfg))
     `uvm_fatal(get_full_name(), "Failed to get gfb_config in sequencer")
+
+  if(cfg.agent_type == gfb_config::SLAVE) begin
+    command_fifo = new("command_fifo", this);
+    command_export = new("command_export", this);
+  end
   
 endfunction: build_phase
 
 
 function void gfb_sequencer::connect_phase(uvm_phase phase);
   super.connect_phase(phase);
-
-  // command_export.connect(command_fifo.analysis_export);
+  if(cfg.agent_type == gfb_config::SLAVE)
+    command_export.connect(command_fifo.analysis_export);
 endfunction: connect_phase
 
 

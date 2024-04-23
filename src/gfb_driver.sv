@@ -230,7 +230,7 @@ task gfb_driver::slave_send_to_if();
       if(slave_item.FCMD == gfb_config::WRITE)
         slave_item.FWDATA = `SLAVE_IF.FWDATA;
       else if(`SLAVE_IF.FCMD == gfb_config::READ)
-        `SLAVE_IF.FRDATA <= slave_item.FRDATA;
+        `SLAVE_IF.FRDATA <= req.FRDATA;
     end
     // ***
   end
