@@ -100,7 +100,6 @@ class gfb_item#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) extends uvm_
     wait_states >= 0;
   }
   
-  
 
   // Functions
   function void post_randomize();

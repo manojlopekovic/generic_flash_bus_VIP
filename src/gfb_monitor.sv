@@ -106,17 +106,18 @@ task gfb_monitor::collect_addr_phase();
   @(monitor_transaction_exit_case);
   if(data_phase_item != null)
     data_mutex.get(1);
-  if(addr_phase_item != null && addr_phase_item.FCMD != gfb_config::IDLE) begin
+  // If address phase of next item started, report error in address phase
+  if(addr_phase_item != null && addr_phase_item.FCMD != gfb_config::IDLE && (`CLK_BLK.FREADY === 0 && `CLK_BLK.FRESP === 1)) begin
     addr_phase_item.item_state = gfb_item::ERROR_ADDR;
-    `uvm_info("MONCOL", $sformatf("%s monitor address phase errored item:\n%s", cfg.agent_type.name(), addr_phase_item.sprint()), UVM_MEDIUM)
+    // `uvm_info("MONCOL", $sformatf("%s monitor address phase errored item:\n%s", cfg.agent_type.name(), addr_phase_item.sprint()), UVM_MEDIUM)
+  end else begin 
+    addr_phase_item = gfb_item#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH)::type_id::create("addr_phase_item");
   end
-  // Todo : write this item to port
-  addr_phase_item = gfb_item#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH)::type_id::create("addr_phase_item");
   addr_phase_item.FADDR = `CLK_BLK.FADDR;
   addr_phase_item.FCMD = `CLK_BLK.FCMD;
   data_phase_item = gfb_item#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH)::type_id::create("data_phase_item");
   data_phase_item.copy(addr_phase_item);
-  data_phase_item.item_state = gfb_item::DATA_PHASE;
+  data_phase_item.item_state = addr_phase_item.item_state == gfb_item::ERROR_ADDR ? gfb_item::ERROR_ADDR : gfb_item::DATA_PHASE;
   // Todo : add check how the item ended
   phase_mutex.put(1);
 endtask: collect_addr_phase
@@ -130,14 +131,15 @@ task gfb_monitor::collect_data_phase();
     data_phase_item.FRDATA = `CLK_BLK.FRDATA;
     data_phase_item.FWDATA = `CLK_BLK.FWDATA;
     // Todo : add check how the item ended
-    if(`CLK_BLK.FRESP === 1) begin
+    // Address phase error should not change, and this item won't be sent to monitor(TBD)
+    if(`CLK_BLK.FRESP === 1 && data_phase_item.item_state != gfb_item::ERROR_ADDR) begin
       data_phase_item.item_state = gfb_item::ERROR_DATA;
-    end else 
+    end else if(data_phase_item.item_state != gfb_item::ERROR_ADDR)
       data_phase_item.item_state = gfb_item::COLLECTED_OK;
     `uvm_info("MONCOL", $sformatf("%s monitor collected item:\n%s", cfg.agent_type.name(), data_phase_item.sprint()), UVM_MEDIUM)
     // Todo : write to transaction port
     data_phase_item = null;
-      data_mutex.put(1);
+    data_mutex.put(1);
   end
 endtask: collect_data_phase
 

@@ -22,8 +22,11 @@ class gfb_driver#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) extends uv
 
   semaphore phase_mutex;
 
+  event driver_transaction_exit_case;
+
   // Slave helper fields
   bit item_in_data_phase = 0;
+  gfb_item slave_item;
 
   // Registration
   `uvm_component_param_utils(gfb_driver#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH))
@@ -125,7 +128,8 @@ task gfb_driver::master_wait_driver_transaction_exit_case();
         disable fork;
       end
     end
-    uvm_event_pool::get_global("driver_transaction_exit_case").trigger();
+    // uvm_event_pool::get_global("driver_transaction_exit_case").trigger();
+    ->driver_transaction_exit_case;
     @`CLK_BLK;
   end
 endtask 
@@ -153,7 +157,8 @@ task gfb_driver::master_drive_addr_phase();
   // wait for event, blocking <- from exit case function
   // if necessary, pass item to data_phase via implemented fifo
   // return 
-  uvm_event_pool::get_global("driver_transaction_exit_case").wait_trigger();
+  // uvm_event_pool::get_global("driver_transaction_exit_case").wait_trigger();
+  @driver_transaction_exit_case;
   data_phase_item = gfb_item#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH)::type_id::create("data_phase_item");
   data_phase_item.copy(addr_phase_item);
   master_drive_init();
@@ -171,10 +176,16 @@ endtask
 
 
 task gfb_driver::master_drive_data_phase();
-  `MASTER_IF.FWDATA <= data_phase_item.FWDATA;
-  uvm_event_pool::get_global("driver_transaction_exit_case").wait_trigger();
+  if(data_phase_item.FCMD == gfb_config::WRITE || data_phase_item.FCMD == gfb_config::ROW_WRITE)
+    `MASTER_IF.FWDATA <= data_phase_item.FWDATA;
+  else
+  `MASTER_IF.FWDATA <= 'X;
+  // uvm_event_pool::get_global("driver_transaction_exit_case").wait_trigger();
+  @driver_transaction_exit_case;
   rsp = gfb_item#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH)::type_id::create("rsp");
   rsp.set_id_info(req);
+  if(`MASTER_IF.FREADY == '0)
+    @(posedge `MASTER_IF.FREADY);
   seq_item_port.put(rsp);
 endtask
 
@@ -206,6 +217,7 @@ endtask
 task gfb_driver::slave_send_to_if();
   `SLAVE_IF.FREADY <= 0;
   `SLAVE_IF.FRESP <= 0;
+  `SLAVE_IF.FRDATA <= 'X;
 
   if(item_in_data_phase && req.error_happening) begin 
     repeat(req.error_after) @`CLK_BLK;
@@ -213,8 +225,23 @@ task gfb_driver::slave_send_to_if();
     @`CLK_BLK;
   end else begin 
     repeat(req.wait_states) @`CLK_BLK;
+    // Driving of Reaad data on rising edge of clock, or sampling write data for potential register models
+    if(slave_item != null) begin 
+      if(slave_item.FCMD == gfb_config::WRITE)
+        slave_item.FWDATA = `SLAVE_IF.FWDATA;
+      else if(`SLAVE_IF.FCMD == gfb_config::READ)
+        `SLAVE_IF.FRDATA <= slave_item.FRDATA;
+    end
+    // ***
   end
   `SLAVE_IF.FREADY <= 1;
+  // Sampling slave_item for register model
+  slave_item = gfb_item#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH)::type_id::create("slave_item");
+  slave_item.FCMD = `SLAVE_IF.FCMD;
+  slave_item.FADDR = `SLAVE_IF.FADDR;
+  slave_item.FRDATA = req.FRDATA;
+  // ***
+  // Used to drive error if necessary
   item_in_data_phase = 0;
   @`CLK_BLK;
   if(`SLAVE_IF.FCMD != gfb_config::IDLE)
