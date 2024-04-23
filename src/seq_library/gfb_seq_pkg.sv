@@ -14,5 +14,6 @@ package gfb_seq_pkg;
 
   `include "gfb_base_seq.sv"
   `include "gfb_simple_rep_seq.sv"
+  `include "gfb_reactive_slave_seq.sv"
 
 endpackage
