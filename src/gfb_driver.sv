@@ -159,6 +159,8 @@ task gfb_driver::master_drive_addr_phase();
   // return 
   // uvm_event_pool::get_global("driver_transaction_exit_case").wait_trigger();
   @driver_transaction_exit_case;
+  if(`MASTER_IF.FRESP == '1)
+    addr_phase_item.item_state = gfb_item::ERROR_ADDR;
   data_phase_item = gfb_item#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH)::type_id::create("data_phase_item");
   data_phase_item.copy(addr_phase_item);
   master_drive_init();
@@ -176,16 +178,27 @@ endtask
 
 
 task gfb_driver::master_drive_data_phase();
-  if(data_phase_item.FCMD == gfb_config::WRITE || data_phase_item.FCMD == gfb_config::ROW_WRITE)
+  if(data_phase_item.FCMD == gfb_config::WRITE || data_phase_item.FCMD == gfb_config::ROW_WRITE && data_phase_item.item_state != gfb_item::ERROR_ADDR)
     `MASTER_IF.FWDATA <= data_phase_item.FWDATA;
   else
-  `MASTER_IF.FWDATA <= 'X;
+    `MASTER_IF.FWDATA <= 'X;
   // uvm_event_pool::get_global("driver_transaction_exit_case").wait_trigger();
-  @driver_transaction_exit_case;
+  if(data_phase_item.abort_happening && data_phase_item.FCMD != gfb_config::IDLE) begin 
+    fork
+      @driver_transaction_exit_case;
+      begin 
+        repeat(data_phase_item.abort_after) @`CLK_BLK;
+        `MASTER_IF.FABORT <= '1;
+      end
+    join_any
+    disable fork;
+  end else 
+    @driver_transaction_exit_case;
   rsp = gfb_item#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH)::type_id::create("rsp");
   rsp.set_id_info(req);
   if(`MASTER_IF.FREADY == '0)
     @(posedge `MASTER_IF.FREADY);
+  `MASTER_IF.FABORT <= '0;
   seq_item_port.put(rsp);
 endtask
 
