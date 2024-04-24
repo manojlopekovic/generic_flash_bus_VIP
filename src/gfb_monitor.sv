@@ -277,7 +277,14 @@ endtask
 
 
 task gfb_monitor::check_command_legal();
-
+  gfb_config::t_CommandType cmd;
+  forever begin 
+    @(`CLK_BLK.FCMD); 
+    cmd = `CLK_BLK.FCMD;
+    if(cmd.name() == "")
+      `uvm_error("ILLCMD", $sformatf("Illegal command value : %3b", cmd));
+      
+  end
 endtask 
 
 
