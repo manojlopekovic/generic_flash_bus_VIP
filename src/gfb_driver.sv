@@ -22,7 +22,7 @@ class gfb_driver#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) extends uv
 
   semaphore phase_mutex;
 
-  event driver_transaction_exit_case;
+  event driver_transaction_exit_case_ev;
 
   // Slave helper fields
   bit item_in_data_phase = 0;
@@ -128,8 +128,8 @@ task gfb_driver::master_wait_driver_transaction_exit_case();
         disable fork;
       end
     end
-    // uvm_event_pool::get_global("driver_transaction_exit_case").trigger();
-    ->driver_transaction_exit_case;
+    // uvm_event_pool::get_global("driver_transaction_exit_case_ev").trigger();
+    ->driver_transaction_exit_case_ev;
     @`CLK_BLK;
   end
 endtask 
@@ -157,8 +157,8 @@ task gfb_driver::master_drive_addr_phase();
   // wait for event, blocking <- from exit case function
   // if necessary, pass item to data_phase via implemented fifo
   // return 
-  // uvm_event_pool::get_global("driver_transaction_exit_case").wait_trigger();
-  @driver_transaction_exit_case;
+  // uvm_event_pool::get_global("driver_transaction_exit_case_ev").wait_trigger();
+  @driver_transaction_exit_case_ev;
   if(`MASTER_IF.FRESP == '1)
     addr_phase_item.item_state = gfb_item::ERROR_ADDR;
   data_phase_item = gfb_item#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH)::type_id::create("data_phase_item");
@@ -182,10 +182,10 @@ task gfb_driver::master_drive_data_phase();
     `MASTER_IF.FWDATA <= data_phase_item.FWDATA;
   else
     `MASTER_IF.FWDATA <= 'X;
-  // uvm_event_pool::get_global("driver_transaction_exit_case").wait_trigger();
+  // uvm_event_pool::get_global("driver_transaction_exit_case_ev").wait_trigger();
   if(data_phase_item.abort_happening && data_phase_item.FCMD != gfb_config::IDLE) begin 
     fork
-      @driver_transaction_exit_case;
+      @driver_transaction_exit_case_ev;
       begin 
         repeat(data_phase_item.abort_after) @`CLK_BLK;
         `MASTER_IF.FABORT <= '1;
@@ -193,7 +193,7 @@ task gfb_driver::master_drive_data_phase();
     join_any
     disable fork;
   end else 
-    @driver_transaction_exit_case;
+    @driver_transaction_exit_case_ev;
   rsp = gfb_item#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH)::type_id::create("rsp");
   rsp.set_id_info(req);
   if(`MASTER_IF.FREADY == '0)

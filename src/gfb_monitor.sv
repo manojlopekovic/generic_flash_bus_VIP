@@ -20,7 +20,7 @@ class gfb_monitor#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) extends u
   semaphore phase_mutex;
   semaphore data_mutex;
 
-  event monitor_transaction_exit_case;
+  event monitor_transaction_exit_case_ev;
 
   // Registration
   `uvm_component_param_utils(gfb_monitor#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH))
@@ -61,6 +61,14 @@ class gfb_monitor#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) extends u
   extern virtual task monitor_wait_exit_cases();
   extern virtual task reset_watcher();
 
+  // Protocol checks
+  extern virtual task start_protocol_checks();
+  extern virtual task check_address_alignment();
+  extern virtual task check_command_legal();
+  extern virtual task check_phase_stability();
+  extern virtual task check_error_response();
+  extern virtual task check_abort_response();
+
   // Reactive slave
   extern virtual task handle_reactive_slave();
   extern virtual task handle_reactive_command(gfb_item it);
@@ -87,7 +95,9 @@ task gfb_monitor::run_phase(uvm_phase phase);
   fork
     collect_item();
     reset_watcher();
+    start_protocol_checks();
   join
+  
 endtask: run_phase
 
 
@@ -108,8 +118,8 @@ endtask: collect_item
 
 
 task gfb_monitor::collect_addr_phase();
-  // uvm_event_pool::get_global("monitor_transaction_exit_case").wait_trigger();
-  @(monitor_transaction_exit_case);
+  // uvm_event_pool::get_global("monitor_transaction_exit_case_ev").wait_trigger();
+  @(monitor_transaction_exit_case_ev);
   if(data_phase_item != null)
     data_mutex.get(1);
   // If address phase of next item started, report error in address phase
@@ -136,8 +146,8 @@ endtask: collect_addr_phase
 task gfb_monitor::collect_data_phase();
   forever begin 
     phase_mutex.get(1);
-    // uvm_event_pool::get_global("monitor_transaction_exit_case").wait_trigger();
-    @(monitor_transaction_exit_case);
+    // uvm_event_pool::get_global("monitor_transaction_exit_case_ev").wait_trigger();
+    @(monitor_transaction_exit_case_ev);
     data_phase_item.FRDATA = `CLK_BLK.FRDATA;
     data_phase_item.FWDATA = `CLK_BLK.FWDATA;
     // Todo : add check how the item ended
@@ -168,7 +178,7 @@ task gfb_monitor::monitor_wait_exit_cases();
         disable fork;
       end
     end
-    -> monitor_transaction_exit_case;
+    -> monitor_transaction_exit_case_ev;
     @`CLK_BLK;
   end
 endtask: collect_data_phase
@@ -195,7 +205,7 @@ task gfb_monitor::handle_reactive_slave();
     fork
       @(`SLAVE_IF.FCMD);
       begin
-        @(monitor_transaction_exit_case);
+        @(monitor_transaction_exit_case_ev);
         @`CLK_BLK;
       end
     join_any
@@ -213,7 +223,7 @@ task gfb_monitor::handle_reactive_command(gfb_item it);
   gfb_item#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH) temp = new("temp");
   temp.copy(it);
   if(`SLAVE_IF.FREADY == 1) begin 
-    @(monitor_transaction_exit_case);
+    @(monitor_transaction_exit_case_ev);
     if(`SLAVE_IF.FREADY == 1) begin 
       case(temp.FCMD)
         gfb_config::WRITE, gfb_config::ROW_WRITE : begin 
@@ -229,3 +239,59 @@ task gfb_monitor::handle_reactive_command(gfb_item it);
     end
   end
 endtask
+
+// *****************************************************************************************
+// Protocol checks
+task gfb_monitor::start_protocol_checks();
+  fork
+    // Todo : add checker disable, as they will be implemented as assertions also
+    check_address_alignment();
+    check_command_legal();
+    // Checkers implemented only in monitor
+    check_phase_stability();
+    check_error_response();
+    check_abort_response();
+  join
+endtask
+
+
+task gfb_monitor::check_address_alignment();
+  forever begin
+    fork
+      @(`CLK_BLK.FADDR);
+      @(`CLK_BLK.FCMD);
+    join_any
+    disable fork;
+    case(`CLK_BLK.FCMD)
+      gfb_config::WRITE, gfb_config::ROW_WRITE : begin 
+        if(`CLK_BLK.FADDR % (WRITE_WIDTH / `BYTE))
+          `uvm_error("ADDRALIGN", $sformatf("Address misalignment : %8h, should be aligned to %d bytes", `CLK_BLK.FADDR, (WRITE_WIDTH / `BYTE)))
+      end
+      gfb_config::READ : begin 
+        if(`CLK_BLK.FADDR % (READ_WIDTH / `BYTE))
+          `uvm_error("ADDRALIGN", $sformatf("Address misalignment : %8h, should be aligned to %d bytes", `CLK_BLK.FADDR, (READ_WIDTH / `BYTE)))
+      end
+    endcase
+  end
+endtask 
+
+
+task gfb_monitor::check_command_legal();
+
+endtask 
+
+
+task gfb_monitor::check_phase_stability();
+
+endtask 
+
+
+task gfb_monitor::check_error_response();
+
+endtask
+
+
+task gfb_monitor::check_abort_response();
+
+endtask
+// *****************************************************************************************

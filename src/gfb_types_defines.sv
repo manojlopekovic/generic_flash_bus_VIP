@@ -14,3 +14,5 @@ Date          : 18.03.2023.
 `define AGT_TYPE cfg.agent_type
 `define MASTER_TYPE gfb_config::MASTER
 `define SLAVE_TYPE gfb_config::SLAVE
+
+`define BYTE 8 

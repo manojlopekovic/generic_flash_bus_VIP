@@ -76,6 +76,17 @@ class gfb_item#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) extends uvm_
       abort_after == 0;
     }
     abort_after >= 0;
+    FCMD dist {gfb_config::IDLE := 3, [gfb_config::READ : gfb_config::ROW_WRITE] :/ 80, gfb_config::ERASE := 10, gfb_config::MASS_ERASE := 7};
+  }
+
+  constraint addr_alignment {
+    solve FCMD before FADDR;
+    
+    if(FCMD == gfb_config::READ){
+      FADDR % (READ_WIDTH / `BYTE) == 0;
+    } else if (FCMD == gfb_config::WRITE || FCMD == gfb_config::ROW_WRITE) {
+      FADDR % (WRITE_WIDTH / `BYTE) == 0;
+    }
   }
 
   constraint slave_constr {
@@ -100,6 +111,7 @@ class gfb_item#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) extends uvm_
     error_after >= 0;
     wait_states >= 0;
   }
+
   
 
   // Functions
