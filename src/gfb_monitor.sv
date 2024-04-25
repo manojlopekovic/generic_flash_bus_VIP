@@ -347,6 +347,8 @@ task gfb_monitor::check_error_response();
   forever begin 
     if(`CLK_BLK.FRESP !== '1)
       @(posedge `CLK_BLK.FRESP);
+    if((addr_phase_item.FCMD == gfb_config::IDLE && data_phase_item == null) || (data_phase_item.FCMD == gfb_config::IDLE))
+      `uvm_error("IDLEERR", "IDLE TRANSACTION CANNOT BE ERRORED")
     if(`CLK_BLK.FREADY != '0)
       `uvm_error("ERR1CYC", "FREADY is HIGH in first cycle of ERROR RESPONSE");
     @`CLK_BLK;
