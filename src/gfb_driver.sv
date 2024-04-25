@@ -192,8 +192,9 @@ task gfb_driver::master_drive_data_phase();
       end
     join_any
     disable fork;
-  end else 
+  end else begin
     @driver_transaction_exit_case_ev;
+  end
   rsp = gfb_item#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH)::type_id::create("rsp");
   rsp.set_id_info(req);
   if(`MASTER_IF.FREADY == '0)

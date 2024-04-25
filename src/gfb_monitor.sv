@@ -66,6 +66,8 @@ class gfb_monitor#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) extends u
   extern virtual task check_address_alignment();
   extern virtual task check_command_legal();
   extern virtual task check_phase_stability();
+  extern virtual task addr_phase_stability();
+  extern virtual task data_phase_stability();
   extern virtual task check_error_response();
   extern virtual task check_abort_response();
 
@@ -243,6 +245,8 @@ endtask
 // *****************************************************************************************
 // Protocol checks
 task gfb_monitor::start_protocol_checks();
+  @(negedge `RESETn);
+  @(posedge `RESETn);
   fork
     // Todo : add checker disable, as they will be implemented as assertions also
     check_address_alignment();
@@ -289,12 +293,69 @@ endtask
 
 
 task gfb_monitor::check_phase_stability();
-
+  forever begin 
+    addr_phase_stability();
+  end
 endtask 
 
 
-task gfb_monitor::check_error_response();
+task gfb_monitor::addr_phase_stability();
+  string err = "";
+  if(`CLK_BLK.FREADY != '1) begin 
+    fork
+      @monitor_transaction_exit_case_ev;
+      @(`CLK_BLK.FADDR) begin 
+        err = "ADDRSTBL";
+      end
+      @(`CLK_BLK.FCMD) begin 
+        err = "CMDSTBL";
+      end
+    join_any
+    disable fork;
+  end
+  if(err != "") begin 
+    if(err == "ADDRSTBL")
+      `uvm_error(err, $sformatf("ADDRESS HAS CHANGED WHILE WAITING FOR ANSWER IN ADDRESS PHASE", ))
+    else 
+      `uvm_error(err, $sformatf("COMMAND HAS CHANGED WHILE WAITING FOR ANSWER IN ADDRESS PHASE", ))
+  end else begin 
+    @`CLK_BLK;
+    fork
+      data_phase_stability();
+    join_none
+  end
+endtask
 
+
+task gfb_monitor::data_phase_stability();
+  string err = "";
+  if(`CLK_BLK.FREADY != '1) begin 
+    fork
+      @monitor_transaction_exit_case_ev;
+      @(`CLK_BLK.FWDATA) begin 
+        err = "WDATASTBL";
+      end
+    join_any
+    disable fork;
+  end
+  if(err != "") 
+    `uvm_error(err, $sformatf("WRITE DATA HAS CHANGED WHILE WAITING FOR ANSWER IN DATA PHASE", ))
+endtask
+
+
+task gfb_monitor::check_error_response();
+  forever begin 
+    if(`CLK_BLK.FRESP !== '1)
+      @(posedge `CLK_BLK.FRESP);
+    if(`CLK_BLK.FREADY != '0)
+      `uvm_error("ERR1CYC", "FREADY is HIGH in first cycle of ERROR RESPONSE");
+    @`CLK_BLK;
+    if(`CLK_BLK.FREADY != '1)
+      `uvm_error("ERR2CYC", "FREADY is LOW in second cycle of ERROR RESPONSE");
+    if(`CLK_BLK.FRESP != '1)
+      `uvm_error("ERR2CYC", "FRESP is LOW in second cycle of ERROR RESPONSE");
+    @`CLK_BLK;    
+  end
 endtask
 
 
