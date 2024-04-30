@@ -49,7 +49,7 @@ endtask
 task gfb_virt_seq::seq_master();
   master_simple_rep = simple_rep_seq::type_id::create("master_simple_rep");
   master_simple_rep.randomize() with {
-    numRep inside {[1:10]};
+    numRep inside {[10:50]};
   };
   master_simple_rep.start(p_sequencer.master_sequencer);
 endtask

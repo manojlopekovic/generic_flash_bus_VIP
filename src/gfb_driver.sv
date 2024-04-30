@@ -129,7 +129,7 @@ task gfb_driver::master_wait_driver_transaction_exit_case();
       end
     end
     // uvm_event_pool::get_global("driver_transaction_exit_case_ev").trigger();
-    ->driver_transaction_exit_case_ev;
+    ->driver_transaction_exit_case_ev; 
     @`CLK_BLK;
   end
 endtask 
@@ -159,8 +159,11 @@ task gfb_driver::master_drive_addr_phase();
   // return 
   // uvm_event_pool::get_global("driver_transaction_exit_case_ev").wait_trigger();
   @driver_transaction_exit_case_ev;
-  if(`MASTER_IF.FRESP == '1)
-    addr_phase_item.item_state = gfb_item::ERROR_ADDR;
+  if(`MASTER_IF.FRESP == '1) 
+    if(`MASTER_IF.FABORT == '1) 
+      addr_phase_item.item_state = gfb_item::ABORT_ADDR;
+    else
+      addr_phase_item.item_state = gfb_item::ERROR_ADDR;
   data_phase_item = gfb_item#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH)::type_id::create("data_phase_item");
   data_phase_item.copy(addr_phase_item);
   master_drive_init();
@@ -178,12 +181,12 @@ endtask
 
 
 task gfb_driver::master_drive_data_phase();
-  if(data_phase_item.FCMD == gfb_config::WRITE || data_phase_item.FCMD == gfb_config::ROW_WRITE && data_phase_item.item_state != gfb_item::ERROR_ADDR)
+  if(data_phase_item.FCMD == gfb_config::WRITE || data_phase_item.FCMD == gfb_config::ROW_WRITE && data_phase_item.item_state != gfb_item::ERROR_ADDR && data_phase_item.item_state != gfb_item::ABORT_ADDR)
     `MASTER_IF.FWDATA <= data_phase_item.FWDATA;
   else
     `MASTER_IF.FWDATA <= 'X;
   // uvm_event_pool::get_global("driver_transaction_exit_case_ev").wait_trigger();
-  if(data_phase_item.abort_happening && data_phase_item.FCMD != gfb_config::IDLE) begin 
+  if(cfg.master_abort_en == '1 && data_phase_item.FCMD != gfb_config::IDLE) begin 
     fork
       @driver_transaction_exit_case_ev;
       begin 
@@ -208,7 +211,7 @@ function void gfb_driver::master_drive_init();
   `MASTER_IF.FADDR <= {ADDR_WIDTH{inactive_val}};
   `MASTER_IF.FCMD <= gfb_config::IDLE;
   `MASTER_IF.FWDATA <= {WRITE_WIDTH{inactive_val}};
-  `MASTER_IF.FABORT <= 0;
+  `MASTER_IF.FABORT <= `MASTER_IF.FABORT === '1 && `MASTER_IF.FREADY === '0 ? '1 : 0;
 endfunction : master_drive_init
 
 // ********************************************************************************************

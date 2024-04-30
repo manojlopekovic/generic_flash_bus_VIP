@@ -39,7 +39,6 @@ class gfb_config#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) extends uv
   rand int unsigned master_rate_erase;
   rand int unsigned master_rate_mass_erase;
   rand bit master_abort_en = '1;
-  rand int unsigned master_abort_rate;
   rand int unsigned max_waits_for_abort;
 
   // #### SLAVE ####
@@ -50,6 +49,11 @@ class gfb_config#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) extends uv
   rand int unsigned max_wait_states_allowed;
   rand int unsigned slave_wait_state_rate;
   rand bit mem_model_exists = '1;
+
+  // #### CHECKS ####
+  rand int unsigned max_abort_wait;
+  rand int unsigned max_response_wait;
+
   
 
   // endianesss
@@ -70,7 +74,6 @@ class gfb_config#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) extends uv
     `uvm_field_int(master_rate_erase, UVM_ALL_ON)
     `uvm_field_int(master_rate_mass_erase, UVM_ALL_ON)
     `uvm_field_int(master_abort_en, UVM_ALL_ON)
-    `uvm_field_int(master_abort_rate, UVM_ALL_ON)
     `uvm_field_int(max_waits_for_abort, UVM_ALL_ON)
     `uvm_field_int(slave_error_en, UVM_ALL_ON)
     `uvm_field_int(slave_error_rate, UVM_ALL_ON)
@@ -78,6 +81,8 @@ class gfb_config#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) extends uv
     `uvm_field_int(max_wait_states_allowed, UVM_ALL_ON)
     `uvm_field_int(slave_wait_state_rate, UVM_ALL_ON)
     `uvm_field_int(mem_model_exists, UVM_ALL_ON)
+    `uvm_field_int(max_abort_wait, UVM_ALL_ON)
+    `uvm_field_int(max_response_wait, UVM_ALL_ON)
   `uvm_object_utils_end
 
   // Constructor
@@ -93,6 +98,8 @@ class gfb_config#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) extends uv
     soft inactive_value == INACTIVE_X;
     soft endianness == LITTLE_ENDIAN;
     soft coverage_on == '1;
+    soft max_response_wait == 256;
+    soft max_abort_wait == 128;
   }
 
   constraint base_slave {
@@ -101,7 +108,7 @@ class gfb_config#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) extends uv
     /*  rand variable constraints  */
     slave_error_rate inside {[0:100]};
     slave_wait_state_rate inside {[0:100]};
-    soft max_wait_states_allowed == 1024;
+    soft max_wait_states_allowed == 128;
     soft mem_model_exists == 1;
   }
 
@@ -111,7 +118,6 @@ class gfb_config#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) extends uv
     /*  rand variable constraints  */
     soft max_waits_for_abort == 128;
     soft max_burst_size == 1024;
-    master_abort_rate inside {[0:100]};
 
     master_rate_idle inside {[0:100]};
     master_rate_erase inside {[0:100]};

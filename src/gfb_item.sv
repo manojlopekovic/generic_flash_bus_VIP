@@ -17,7 +17,6 @@ class gfb_item#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) extends uvm_
   rand bit [ADDR_WIDTH-1:0] FADDR;
   rand gfb_config::t_CommandType FCMD;
   rand bit [WRITE_WIDTH-1:0] FWDATA;
-  rand bit abort_happening;
   rand int unsigned abort_after;
   rand bit burst_happening;
   rand int unsigned burst_size;
@@ -42,7 +41,6 @@ class gfb_item#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) extends uvm_
     `uvm_field_int(FADDR, UVM_ALL_ON)
     `uvm_field_enum(gfb_config::t_CommandType, FCMD, UVM_ALL_ON)
     `uvm_field_int(FWDATA, UVM_ALL_ON)
-    `uvm_field_int(abort_happening, UVM_ALL_ON)
     `uvm_field_int(abort_after, UVM_ALL_ON)
     `uvm_field_int(burst_happening, UVM_ALL_ON)
     `uvm_field_int(burst_size, UVM_ALL_ON)
@@ -72,9 +70,6 @@ class gfb_item#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) extends uvm_
       soft wait_happening == '0;
       soft wait_states == '0;
     }
-    if(abort_happening == 0){
-      abort_after == 0;
-    }
     abort_after >= 0;
     FCMD dist {gfb_config::IDLE := 3, [gfb_config::READ : gfb_config::ROW_WRITE] :/ 80, gfb_config::ERASE := 10, gfb_config::MASS_ERASE := 7};
   }
@@ -97,7 +92,6 @@ class gfb_item#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) extends uvm_
       soft FADDR == '0;
       soft FCMD == '0;
       soft FWDATA == '0;
-      soft abort_happening == '0;
       soft abort_after == '0;
       soft burst_happening == '0;
       soft burst_size == '0;

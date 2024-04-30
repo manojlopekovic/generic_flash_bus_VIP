@@ -67,10 +67,7 @@ endfunction: end_of_elaboration_phase
 function void base_test::modify_master_cfg();
   master_cfg.randomize() with {
     agent_type == gfb_config::MASTER;
-    slave_wait_state_en == '1;
-    slave_wait_state_rate == 50;
-    slave_error_en == '1;
-    slave_error_rate == 30;
+    master_abort_en == '1;
   };
 endfunction
 
@@ -78,6 +75,10 @@ endfunction
 function void  base_test::modify_slave_cfg();
   slave_cfg.randomize() with {
     agent_type == gfb_config::SLAVE;
+    slave_wait_state_en == '1;
+    slave_wait_state_rate == 50;
+    slave_error_en == '1;
+    slave_error_rate == 30;
   };
 endfunction
 

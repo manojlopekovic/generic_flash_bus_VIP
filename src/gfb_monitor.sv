@@ -70,6 +70,7 @@ class gfb_monitor#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) extends u
   extern virtual task data_phase_stability();
   extern virtual task check_error_response();
   extern virtual task check_abort_response();
+  extern virtual task check_transaction_response();
 
   // Reactive slave
   extern virtual task handle_reactive_slave();
@@ -255,6 +256,7 @@ task gfb_monitor::start_protocol_checks();
     check_phase_stability();
     check_error_response();
     check_abort_response();
+    check_transaction_response();
   join
 endtask
 
@@ -301,7 +303,7 @@ endtask
 
 task gfb_monitor::addr_phase_stability();
   string err = "";
-  if(`CLK_BLK.FREADY != '1) begin 
+  if(`CLK_BLK.FREADY === '0 && `CLK_BLK.FRESP === '0) begin 
     fork
       @monitor_transaction_exit_case_ev;
       @(`CLK_BLK.FADDR) begin 
@@ -362,6 +364,50 @@ endtask
 
 
 task gfb_monitor::check_abort_response();
+  forever begin 
+    if(`CLK_BLK.FABORT !== '1) begin 
+      @(posedge `CLK_BLK.FABORT);
+      if((addr_phase_item.FCMD == gfb_config::IDLE && data_phase_item == null) || (data_phase_item.FCMD == gfb_config::IDLE))
+        `uvm_error("ABORTIDLE", "ABORT happened on IDLE command");    
+    end
+    fork
+      begin
+        @monitor_transaction_exit_case_ev;
+        if(`CLK_BLK.FREADY !== '1)
+          @(posedge `CLK_BLK.FREADY);
+        if(`CLK_BLK.FABORT !== '1)
+          `uvm_error("ABORTERR", "ABORT went to LOW before end of abort sequence")
+        @`CLK_BLK;
+      end
+      begin 
+        repeat(cfg.max_abort_wait)@`CLK_BLK;
+        `uvm_error("ABORTNORESP", "ABORT request answer wait time exceeded");        
+      end
+    join_any
+    disable fork;
+  end
+endtask
 
+
+task gfb_monitor::check_transaction_response();
+  forever begin 
+    @monitor_transaction_exit_case_ev;
+    if(`CLK_BLK.FCMD != gfb_config::IDLE) begin 
+      fork
+        begin 
+          fork
+            begin 
+              @monitor_transaction_exit_case_ev;
+            end
+            begin
+              repeat(cfg.max_response_wait) @`CLK_BLK;
+              `uvm_error("NORESP", "MAX wait response time exceeded");
+            end
+          join_any
+          disable fork;
+        end
+      join_none
+    end
+  end
 endtask
 // *****************************************************************************************
