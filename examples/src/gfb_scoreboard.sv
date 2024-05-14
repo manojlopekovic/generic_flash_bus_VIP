@@ -138,6 +138,6 @@ endtask: _standardgfb_scoreboard_operation
 
 
 function void gfb_scoreboard::compare_items();
-
+  masterItem.compare(slaveItem);
 endfunction
 

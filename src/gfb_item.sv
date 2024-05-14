@@ -36,19 +36,19 @@ class gfb_item#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) extends uvm_
 
   // Registration
   `uvm_object_param_utils_begin(gfb_item#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH))
-    `uvm_field_enum(gfb_config::t_AgtType, it_type, UVM_ALL_ON)
-    `uvm_field_enum(t_ItemState, item_state, UVM_ALL_ON)
-    `uvm_field_int(FADDR, UVM_ALL_ON)
-    `uvm_field_enum(gfb_config::t_CommandType, FCMD, UVM_ALL_ON)
-    `uvm_field_int(FWDATA, UVM_ALL_ON)
-    `uvm_field_int(abort_after, UVM_ALL_ON)
-    `uvm_field_int(burst_happening, UVM_ALL_ON)
-    `uvm_field_int(burst_size, UVM_ALL_ON)
-    `uvm_field_int(FRDATA, UVM_ALL_ON)
-    `uvm_field_int(error_happening, UVM_ALL_ON)
-    `uvm_field_int(error_after, UVM_ALL_ON)
-    `uvm_field_int(wait_happening, UVM_ALL_ON)
-    `uvm_field_int(wait_states, UVM_ALL_ON)
+    `uvm_field_enum(gfb_config::t_AgtType, it_type, UVM_ALL_ON + UVM_NOCOMPARE)
+    `uvm_field_enum(t_ItemState, item_state, UVM_ALL_ON + UVM_NOCOMPARE)
+    `uvm_field_int(FADDR, UVM_ALL_ON + UVM_NOCOMPARE)
+    `uvm_field_enum(gfb_config::t_CommandType, FCMD, UVM_ALL_ON + UVM_NOCOMPARE)
+    `uvm_field_int(FWDATA, UVM_ALL_ON + UVM_NOCOMPARE)
+    `uvm_field_int(abort_after, UVM_ALL_ON + UVM_NOCOMPARE)
+    `uvm_field_int(burst_happening, UVM_ALL_ON + UVM_NOCOMPARE)
+    `uvm_field_int(burst_size, UVM_ALL_ON + UVM_NOCOMPARE)
+    `uvm_field_int(FRDATA, UVM_ALL_ON + UVM_NOCOMPARE)
+    `uvm_field_int(error_happening, UVM_ALL_ON + UVM_NOCOMPARE)
+    `uvm_field_int(error_after, UVM_ALL_ON + UVM_NOCOMPARE)
+    `uvm_field_int(wait_happening, UVM_ALL_ON + UVM_NOCOMPARE)
+    `uvm_field_int(wait_states, UVM_ALL_ON + UVM_NOCOMPARE)
   `uvm_object_utils_end
 
   // Components
@@ -117,6 +117,25 @@ class gfb_item#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) extends uvm_
   function void pre_randomize();
 
   endfunction: pre_randomize
+
+  virtual function bit do_compare(uvm_object rhs, uvm_comparer comparer);
+    bit res;
+    gfb_item _obj;
+    $cast(_obj, rhs);
+    res = super.do_compare(_obj, comparer) &
+        this.FADDR == _obj.FADDR &
+        this.FCMD == _obj.FCMD &
+        this.FWDATA == _obj.FWDATA &
+        this.item_state == _obj.item_state &
+        this.FRDATA == _obj.FRDATA;
+    
+    if(res == 0)
+      `uvm_error("MISCMP", $sformatf("Comparing different objects: \nobj1: %s \nobj2: %s", this.sprint(), _obj.sprint()))
+    else 
+      `uvm_info("OKCMP", "Okay comparison", UVM_HIGH)
+      
+      
+  endfunction
 
   // Tasks
 endclass //gfb_item extends uvm_sequencegfb_item
