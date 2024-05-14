@@ -15,7 +15,9 @@ class gfb_virt_seq#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) extends 
   `uvm_declare_p_sequencer(gfb_virt_seqr)
 
   // Sequences
-  simple_rep_seq master_simple_rep;
+  write_seq seq_write;
+  read_seq seq_read;
+  erase_seq seq_erase;
   reactive_slave_seq slave_reactive;
   
   // Constructor
@@ -47,9 +49,27 @@ endtask
 
 
 task gfb_virt_seq::seq_master();
-  master_simple_rep = simple_rep_seq::type_id::create("master_simple_rep");
-  master_simple_rep.randomize() with {
-    numRep inside {[10:50]};
-  };
-  master_simple_rep.start(p_sequencer.master_sequencer);
+  seq_write = write_seq::type_id::create("write_seq");
+  seq_read = read_seq::type_id::create("read_seq");
+  seq_erase = erase_seq::type_id::create("erase_seq");
+
+  repeat(5) begin 
+    randcase
+      40 : begin 
+        seq_write.randomize() with {numRep < 20;};
+        seq_write.start(p_sequencer.master_sequencer);
+        break;
+      end
+      40 : begin 
+        seq_read.randomize() with {numRep < 20;};
+        seq_read.start(p_sequencer.master_sequencer);
+        break;
+      end 
+      20 : begin 
+        seq_erase.randomize() with {numRep < 20;};
+        seq_erase.start(p_sequencer.master_sequencer);
+        break;
+      end
+    endcase
+  end
 endtask
