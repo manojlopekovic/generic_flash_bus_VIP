@@ -163,7 +163,7 @@ task gfb_monitor::collect_data_phase();
     end else if(data_phase_item.item_state != gfb_item::ERROR_ADDR && data_phase_item.item_state != gfb_item::ABORT_ADDR)
       data_phase_item.item_state = gfb_item::COLLECTED_OK;
     `uvm_info("MONCOL", $sformatf("%s monitor collected item:\n%s", cfg.agent_type.name(), data_phase_item.sprint()), UVM_MEDIUM)
-    // Todo : write to transaction port
+    transaction_port.write(data_phase_item);
     data_phase_item = null;
     data_mutex.put(1);
   end

@@ -12,6 +12,10 @@ class gfb_scoreboard#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) extend
   // _env_config_class _env_config;
 
   // Properties
+  int numTransactions;
+
+  gfb_item#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH) masterItem;
+  gfb_item#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH) slaveItem;
 
   // Report numbers
 
@@ -45,6 +49,7 @@ class gfb_scoreboard#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) extend
   extern task shutdown_phase(uvm_phase phase);
   
   // Functions
+  extern function void compare_items();
 
   // Tasks
   extern task _standard_scoreboard_operation();
@@ -101,7 +106,38 @@ endfunction: report_phase
 
 
 task gfb_scoreboard::_standard_scoreboard_operation();
+  gfb_item#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH) hlpItem1;
+  gfb_item#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH) hlpItem2;
+  
+  numTransactions = 0;
+  
+  hlpItem1 = gfb_item#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH)::type_id::create("hlpItem1");
+  hlpItem1 = gfb_item#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH)::type_id::create("hlpItem2");
+  masterItem = gfb_item#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH)::type_id::create("masterItem");
+  slaveItem = gfb_item#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH)::type_id::create("slaveItem");
 
+  forever begin
+    // Todo : this fork should be in function 
+    fork
+      begin 
+        masterFIFO.get(hlpItem1);
+        $cast(masterItem, hlpItem1.clone());
+        `uvm_info(get_full_name(), $sformatf("SCOREBOARD MASTER ITEM : \n %s", masterItem.sprint()), UVM_LOW)
+      end
+      begin 
+        slaveFIFO.get(hlpItem2);
+        $cast(slaveItem, hlpItem2.clone());
+        `uvm_info(get_full_name(), $sformatf("SCOREBOARD SLAVE ITEM : \n %s", slaveItem.sprint()), UVM_LOW)
+      end
+    join
+    compare_items();
+    numTransactions++;
+    // Todo : reference model checks
+  end
 endtask: _standardgfb_scoreboard_operation
 
+
+function void gfb_scoreboard::compare_items();
+
+endfunction
 
