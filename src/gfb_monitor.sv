@@ -372,7 +372,8 @@ task gfb_monitor::check_abort_response();
     end
     fork
       begin
-        @monitor_transaction_exit_case_ev;
+        if(`CLK_BLK.FREADY === '0 && `CLK_BLK.FRESP === '0)
+          @monitor_transaction_exit_case_ev;
         if(`CLK_BLK.FREADY !== '1)
           @(posedge `CLK_BLK.FREADY);
         if(`CLK_BLK.FABORT !== '1)
