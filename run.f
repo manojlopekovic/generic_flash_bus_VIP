@@ -21,21 +21,30 @@ Notes         :
 
 // include directories
 //*** add incdir include directories here
++incdir+${TRAINING_HOME}/examples/toggle_vip/src
++incdir+${TRAINING_HOME}/examples/clk_vip/src
+
 +incdir+${TRAINING_HOME}/src/
 +incdir+${TRAINING_HOME}/src/seq_library
-+incdir+${TRAINING_HOME}/examples/toggle_vip/src
 +incdir+${TRAINING_HOME}/examples/src/
 +incdir+${TRAINING_HOME}/examples/tests/
 +incdir+${TRAINING_HOME}/examples/tb/
 
 // compile files
 //*** add compile files here
--sv ${TRAINING_HOME}/src/gfb_interface.sv
--sv ${TRAINING_HOME}/src/gfb_pkg.sv
--sv ${TRAINING_HOME}/src/seq_library/gfb_seq_pkg.sv
+
 -sv ${TRAINING_HOME}/examples/toggle_vip/src/toggle_interface.sv
 -sv ${TRAINING_HOME}/examples/toggle_vip/src/toggle_pkg.sv
 -sv ${TRAINING_HOME}/examples/toggle_vip/src/toggle_seq_pkg.sv
+
+-sv ${TRAINING_HOME}/examples/clk_vip/src/clk_if.sv
+-sv ${TRAINING_HOME}/examples/clk_vip/src/clk_pkg.sv
+-sv ${TRAINING_HOME}/examples/clk_vip/src/clk_seq_pkg.sv
+
+
+-sv ${TRAINING_HOME}/src/gfb_interface.sv
+-sv ${TRAINING_HOME}/src/gfb_pkg.sv
+-sv ${TRAINING_HOME}/src/seq_library/gfb_seq_pkg.sv
 -sv ${TRAINING_HOME}/examples/src/gfb_env_pkg.sv
 -sv ${TRAINING_HOME}/examples/tests/gfb_test_pkg.sv
 -sv ${TRAINING_HOME}/examples/tb/top.sv

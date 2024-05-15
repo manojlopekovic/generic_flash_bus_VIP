@@ -14,6 +14,7 @@ package gfb_test_pkg;
   import gfb_env_pkg::*;
   import gfb_seq_pkg::*;
   import toggle_pkg::*;
+  import clk_pkg::*;
   
   `include "gfb_base_test.sv"
   `include "gfb_simple_rep_test.sv"

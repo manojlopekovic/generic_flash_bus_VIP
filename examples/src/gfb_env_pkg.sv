@@ -14,6 +14,8 @@ package gfb_env_pkg;
   import gfb_seq_pkg::*;
   import toggle_pkg::*;
   import toggle_seq_pkg::*;
+  import clk_pkg::*;
+  import clk_seq_pkg::*;
   
   `include "gfb_scoreboard.sv"
   `include "gfb_virt_seqr.sv"

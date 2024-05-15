@@ -16,6 +16,7 @@ class base_test extends uvm_test;
   gfb_config master_cfg;
   gfb_config slave_cfg;
   toggle_cfg tgl_cfg;
+  clk_conf clk_cfg;
 
   // Configuration
 
@@ -35,6 +36,7 @@ class base_test extends uvm_test;
   extern virtual  function void modify_master_cfg();
   extern virtual  function void modify_slave_cfg();
   extern virtual function void modify_toggle_cfg();
+  extern virtual function void modify_clk_cfg();
 
 endclass : base_test
 
@@ -44,6 +46,7 @@ function void base_test::build_phase(uvm_phase phase);
   master_cfg = gfb_config::type_id::create("master_cfg");
   slave_cfg = gfb_config::type_id::create("slave_cfg");
   tgl_cfg = toggle_cfg::type_id::create("toggle_cfg");
+  clk_cfg = clk_conf::type_id::create("clk_cfg");
 
   modify_master_cfg();
   // modify_slave_cfg();
@@ -52,12 +55,13 @@ function void base_test::build_phase(uvm_phase phase);
   slave_cfg.agent_type = gfb_config::SLAVE;
 
   modify_toggle_cfg();
+  modify_clk_cfg();
 
   `uvm_info("CFG_PRINT", $sformatf("BASE TEST: \nM_CFG : \n %s \nS_CFG: \n %s", master_cfg.sprint(), slave_cfg.sprint()), UVM_NONE)
   uvm_config_db#(gfb_config)::set(this, "env", "master_cfg", master_cfg);
   uvm_config_db#(gfb_config)::set(this, "env", "slave_cfg", slave_cfg);
   uvm_config_db#(toggle_cfg)::set(this, "env", "toggle_cfg", tgl_cfg);
-  
+  uvm_config_db#(clk_conf)::set(this, "env", "clk_cfg", clk_cfg);
 
   env = gfb_env::type_id::create("env", this);
 endfunction: build_phase
@@ -92,5 +96,14 @@ function void base_test::modify_toggle_cfg();
   tgl_cfg.randomize() with {
     active_val == 0;
     drivingType == ASYNCH_SYNCH;
+  };
+endfunction
+
+
+function void base_test::modify_clk_cfg();
+  clk_cfg.randomize() with {
+    num_clk == 1;
+    freq.size() == num_clk;
+    freq[0] == 1_000;
   };
 endfunction

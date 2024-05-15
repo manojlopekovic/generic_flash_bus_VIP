@@ -17,6 +17,7 @@ class gfb_init_virt_seq#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) ext
   // Sequences
   toggle_rise_seq rise_seq;
   toggle_fall_seq fall_seq;
+  start_seq clk_start_seq;
   
   // Constructor
   function new(string name = "gfb_init_virt_seq");
@@ -32,21 +33,31 @@ class gfb_init_virt_seq#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) ext
   task body();
     rise_seq = toggle_rise_seq::type_id::create("rise_seq");
     fall_seq = toggle_fall_seq::type_id::create("fall_seq");
+    clk_start_seq = start_seq::type_id::create("clk_start_seq");
 
-    rise_seq.randomize() with {
-      delay_clk == 0;
-      delay_after_clk == 0;
-    };
-    rise_seq.start(p_sequencer.toggle_sequencer);
-    fall_seq.randomize() with {
-      delay_clk inside {[5:10]};
-      delay_after_clk inside {[5:50]};
-    };
-    fall_seq.start(p_sequencer.toggle_sequencer);
-    rise_seq.randomize() with {
-      delay_clk inside {[3:10]};
-      delay_after_clk == 0;
-    };
-    rise_seq.start(p_sequencer.toggle_sequencer);
+    fork
+      begin 
+        assert(clk_start_seq.randomize() with {cmd == START_CLK;});
+        clk_start_seq.start(p_sequencer.clock_sequencer);
+      end
+      begin 
+        rise_seq.randomize() with {
+          delay_clk == 0;
+          delay_after_clk == 0;
+        };
+        rise_seq.start(p_sequencer.toggle_sequencer);
+        fall_seq.randomize() with {
+          delay_clk inside {[5:10]};
+          delay_after_clk inside {[5:50]};
+        };
+        fall_seq.start(p_sequencer.toggle_sequencer);
+        rise_seq.randomize() with {
+          delay_clk inside {[3:10]};
+          delay_after_clk == 0;
+        };
+        rise_seq.start(p_sequencer.toggle_sequencer);
+      end
+    join
+
   endtask: body
 endclass //gfb_init_virt_seq extends uvm_sequence

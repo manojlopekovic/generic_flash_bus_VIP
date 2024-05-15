@@ -12,20 +12,22 @@ module top;
 
   import gfb_test_pkg::*;
   import toggle_pkg::*;
+  import clk_pkg::*;
 
   bit clk, resetn;
 
+  clk_if clk_interface();
+  assign clk = clk_interface.clk;
+
+
   assign resetn = rst_n_if.data;
   toggle_interface rst_n_if(clk);
-  
 
   gfb_interface intf(clk, resetn);
 
 
-  always #50 clk = ~clk;
-
-
   initial begin 
+    uvm_config_db#(virtual clk_if)::set(uvm_root::get(), "*", "clk_if0", clk_interface);
     uvm_config_db#(virtual toggle_interface)::set(uvm_root::get(), "*", "rst_inf", rst_n_if);
     uvm_config_db#(virtual gfb_interface)::set(uvm_root::get(),"*","intf", intf);
 

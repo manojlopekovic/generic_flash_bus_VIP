@@ -12,6 +12,7 @@ class gfb_env#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) extends uvm_e
   gfb_config slave_cfg;
   gfb_config master_cfg;
   toggle_cfg toggle_cfg;
+  clk_conf clk_cfg;
 
   // Properties
 
@@ -23,9 +24,10 @@ class gfb_env#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) extends uvm_e
 
   // Components
   // Todo : add clock agent
+  toggle_agent reset_agent;
+  clk_agent clock_agent;
   gfb_agent slave_agent;
   gfb_agent master_agent;
-  toggle_agent reset_agent;
   gfb_scoreboard scoreboard;
   gfb_virt_seqr virt_seqr;
 
@@ -55,8 +57,14 @@ function void gfb_env::build_phase(uvm_phase phase);
   if(!uvm_config_db#(toggle_cfg)::get(this, "", "toggle_cfg", toggle_cfg))
     `uvm_fatal(get_full_name(), "Failed to get toggle_cfg in env")
 
+  if(!uvm_config_db#(clk_conf)::get(this, "", "clk_cfg", clk_cfg))
+    `uvm_fatal(get_full_name(), "Failed to get clk_cfg in env")
+
   if(!uvm_config_db#(virtual toggle_interface)::get(this, "", "rst_inf", rst_n_if))
     `uvm_fatal(get_full_name(), "Failed to get rst_inf in env")
+
+  uvm_config_db#(clk_conf)::set(this, "clock_agent.*", "clk_conf", clk_cfg);
+  clock_agent = clk_agent::type_id::create("clock_agent", this);
 
   uvm_config_db#(virtual toggle_interface)::set(this, "reset_agent.driver", "vif", rst_n_if);
   uvm_config_db#(virtual toggle_interface)::set(this, "reset_agent.monitor", "vif", rst_n_if);
@@ -73,6 +81,7 @@ function void gfb_env::build_phase(uvm_phase phase);
   uvm_config_db#(gfb_config)::set(this, "virt_seqr", "master_seqr_cfg", master_cfg);
   uvm_config_db#(gfb_config)::set(this, "virt_seqr", "slave_seqr_cfg", slave_cfg);
   uvm_config_db#(toggle_cfg)::set(this, "virt_seqr", "toggle_cfg", toggle_cfg);
+  uvm_config_db#(clk_conf)::set(this, "virt_seqr", "clk_conf", clk_cfg);
   virt_seqr = gfb_virt_seqr::type_id::create("virt_seqr", this);
 endfunction: build_phase
 
@@ -81,6 +90,8 @@ function void gfb_env::connect_phase(uvm_phase phase);
   virt_seqr.master_sequencer = master_agent.sequencer;
   virt_seqr.slave_sequencer = slave_agent.sequencer;
   virt_seqr.toggle_sequencer = reset_agent.sequencer;
+  virt_seqr.clock_sequencer = clock_agent.sequencer;
+
   master_agent.monitor.transaction_port.connect(scoreboard.masterPort);
   slave_agent.monitor.transaction_port.connect(scoreboard.slavePort);
   // Todo : check if reset port connection is needed in scoreboard
