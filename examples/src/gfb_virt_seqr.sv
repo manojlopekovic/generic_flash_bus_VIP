@@ -12,10 +12,12 @@ class gfb_virt_seqr#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) extends
   // gfb_env_config_class env_config;
   gfb_config master_cfg;
   gfb_config slave_cfg;
+  toggle_cfg toggle_cfg;
 
   // Sequencers
   gfb_sequencer master_sequencer;
   gfb_sequencer slave_sequencer;
+  toggle_sequencer toggle_sequencer;
 
   // Registration
   `uvm_component_param_utils(gfb_virt_seqr#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH))
@@ -30,6 +32,8 @@ class gfb_virt_seqr#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) extends
     if(!uvm_config_db#(gfb_config)::get(this, "", "master_seqr_cfg", master_cfg))
       `uvm_fatal(get_full_name(), "Failed to get master gfb_config in virtual sequencer")
     if(!uvm_config_db#(gfb_config)::get(this, "", "slave_seqr_cfg", slave_cfg))
+      `uvm_fatal(get_full_name(), "Failed to get slave gfb_config in virtual sequencer")
+    if(!uvm_config_db#(toggle_cfg)::get(this, "", "toggle_cfg", toggle_cfg))
       `uvm_fatal(get_full_name(), "Failed to get slave gfb_config in virtual sequencer")
 
 

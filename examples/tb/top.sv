@@ -7,29 +7,29 @@ Date          : 18.03.2023.
 -----------------------------------------------------------------*/
 
 module top;
-  import uvm_pkg::*;
   `include "uvm_macros.svh"
+  import uvm_pkg::*;
 
   import gfb_test_pkg::*;
+  import toggle_pkg::*;
 
   bit clk, resetn;
 
-  always #50 clk = ~clk;
+  assign resetn = rst_n_if.data;
+  toggle_interface rst_n_if(clk);
+  
 
   gfb_interface intf(clk, resetn);
 
-  initial begin 
-    clk = 1'b1;
-    resetn = 1'b1;
 
+  always #50 clk = ~clk;
+
+
+  initial begin 
+    uvm_config_db#(virtual toggle_interface)::set(uvm_root::get(), "*", "rst_inf", rst_n_if);
     uvm_config_db#(virtual gfb_interface)::set(uvm_root::get(),"*","intf", intf);
 
     run_test("base_test");
-  end
-
-  initial begin 
-    #130 resetn = 1'b0;
-    repeat(3) @(intf.cb) resetn = 1'b1;
   end
 
 

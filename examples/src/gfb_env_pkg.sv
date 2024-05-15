@@ -12,10 +12,13 @@ package gfb_env_pkg;
   
   import gfb_pkg::*;
   import gfb_seq_pkg::*;
+  import toggle_pkg::*;
+  import toggle_seq_pkg::*;
   
   `include "gfb_scoreboard.sv"
   `include "gfb_virt_seqr.sv"
   `include "gfb_virt_seq.sv"
+  `include "gfb_init_virt_seq.sv"
   `include "gfb_env.sv"
   
 endpackage
