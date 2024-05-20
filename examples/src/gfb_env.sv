@@ -89,7 +89,7 @@ function void gfb_env::connect_phase(uvm_phase phase);
   super.connect_phase(phase);
   virt_seqr.master_sequencer = master_agent.sequencer;
   virt_seqr.slave_sequencer = slave_agent.sequencer;
-  virt_seqr.toggle_sequencer = reset_agent.sequencer;
+  virt_seqr.reset_sequencer = reset_agent.sequencer;
   virt_seqr.clock_sequencer = clock_agent.sequencer;
 
   master_agent.monitor.transaction_port.connect(scoreboard.masterPort);

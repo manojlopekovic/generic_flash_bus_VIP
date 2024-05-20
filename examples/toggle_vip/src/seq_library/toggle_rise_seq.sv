@@ -24,7 +24,7 @@ class toggle_rise_seq extends base_seq;
     /*  solve order constraints  */
   
     /*  rand variable constraints  */
-    soft delay_clk inside {[0:50]};
+    soft delay_clk inside {[1:50]};
     soft delay_after_clk inside {[0:50]};
   }
 

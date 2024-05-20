@@ -12,14 +12,16 @@ class erase_seq extends base_seq;
   rand int numRep = 1;
   rand bit massErase = 0;
   rand bit[ADDR_WIDTH-1 : 0] eraseAddr[];
+  rand bit wait_resp = 0; 
 
   // Constraint
   constraint numRepValid {
     /*  solve order constraints  */
   
     /*  rand variable constraints  */
-    numRep >= 0;
+    numRep > 0;
     soft numRep <= 100;
+    soft wait_resp == 0;
   }
 
   constraint sizeValid {
@@ -61,10 +63,26 @@ class erase_seq extends base_seq;
 
   // Body of a sequence
   virtual task body();
-    fork
+    rsp = gfb_item#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH)::type_id::create("rsp");
+    if(wait_resp == 0) begin 
+      fork
+        begin 
+          while(rsp.FCMD != gfb_config::ERASE && rsp.FCMD != gfb_config::MASS_ERASE)
+            get_response(rsp);
+          wait_answers();
+        end
+      join_none
       drive_seq();
-      wait_answers();
-    join
+    end else begin 
+      fork
+        drive_seq();
+        begin 
+          while(rsp.FCMD != gfb_config::ERASE && rsp.FCMD != gfb_config::MASS_ERASE)
+            get_response(rsp);
+          wait_answers();
+        end
+      join
+    end
   endtask: body
 
   
@@ -81,7 +99,11 @@ task erase_seq::drive_seq();
       if(p_sequencer.cfg.master_abort_en == 1){ 
         abort_after inside {[0:p_sequencer.cfg.max_waits_for_abort]};
       }
-      FCMD == massErase == 0 ? gfb_config::MASS_ERASE : gfb_config::ERASE;
+      if(massErase == 1)
+        FCMD == gfb_config::MASS_ERASE;
+      else
+        FCMD == gfb_config::ERASE;
+      // FCMD == massErase == 0 ? gfb_config::MASS_ERASE : gfb_config::ERASE;
       FADDR == eraseAddr[i];
     });
     finish_item(req);
@@ -91,7 +113,8 @@ endtask
 
 
 task erase_seq::wait_answers();
-  repeat(numRep) begin
+  repeat(numRep - 1) begin
     get_response(rsp);
+    `uvm_info("GETRSP", $sformatf("Recieved rsp: %s\n", rsp.sprint()), UVM_DEBUG)
   end
 endtask

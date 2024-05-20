@@ -19,8 +19,10 @@ class gfb_driver#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) extends uv
   // Master helper fields
   gfb_item addr_phase_item;
   gfb_item data_phase_item;
+  int data_item_finished = 1;
 
   semaphore phase_mutex;
+  semaphore data_mutex;
 
   event driver_transaction_exit_case_ev;
 
@@ -37,6 +39,7 @@ class gfb_driver#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) extends uv
   function new(string name, uvm_component parent);
     super.new(name, parent);
     phase_mutex = new(0);
+    data_mutex = new(0);
   endfunction //new()
 
   // Phases
@@ -159,13 +162,18 @@ task gfb_driver::master_drive_addr_phase();
   // return 
   // uvm_event_pool::get_global("driver_transaction_exit_case_ev").wait_trigger();
   @driver_transaction_exit_case_ev;
-  if(`MASTER_IF.FRESP == '1) 
-    if(`MASTER_IF.FABORT == '1) 
-      addr_phase_item.item_state = gfb_item::ABORT_ADDR;
-    else
-      addr_phase_item.item_state = gfb_item::ERROR_ADDR;
+  if(data_item_finished == 0)
+    data_mutex.get(1);
+  if(`MASTER_IF.FREADY == '0)
+    if(`MASTER_IF.FRESP == '1) 
+      if(`MASTER_IF.FABORT == '1) 
+        addr_phase_item.item_state = gfb_item::ABORT_ADDR;
+      else
+        addr_phase_item.item_state = gfb_item::ERROR_ADDR;
   data_phase_item = gfb_item#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH)::type_id::create("data_phase_item");
   data_phase_item.copy(addr_phase_item);
+  data_phase_item.set_id_info(req);
+  data_item_finished = 0;
   master_drive_init();
   // Todo : add check how the item ended
   phase_mutex.put(1);
@@ -198,12 +206,19 @@ task gfb_driver::master_drive_data_phase();
   end else begin
     @driver_transaction_exit_case_ev;
   end
-  rsp = gfb_item#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH)::type_id::create("rsp");
-  rsp.set_id_info(req);
-  if(`MASTER_IF.FREADY == '0)
-    @(posedge `MASTER_IF.FREADY);
-  `MASTER_IF.FABORT <= '0;
-  seq_item_port.put(rsp);
+  data_item_finished = 1;
+  data_mutex.put(1);
+  fork
+    begin   
+      if(`MASTER_IF.FREADY == '0)
+        @(posedge `MASTER_IF.FREADY);
+      `MASTER_IF.FABORT <= '0;
+      rsp = gfb_item#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH)::type_id::create("rsp");
+      rsp.set_id_info(data_phase_item);
+      rsp.copy(data_phase_item);
+      seq_item_port.put(rsp);
+    end
+  join_none
 endtask
 
 

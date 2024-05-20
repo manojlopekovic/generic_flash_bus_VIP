@@ -45,17 +45,17 @@ class gfb_init_virt_seq#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) ext
           delay_clk == 0;
           delay_after_clk == 0;
         };
-        rise_seq.start(p_sequencer.toggle_sequencer);
+        rise_seq.start(p_sequencer.reset_sequencer);
         fall_seq.randomize() with {
           delay_clk inside {[5:10]};
           delay_after_clk inside {[5:50]};
         };
-        fall_seq.start(p_sequencer.toggle_sequencer);
+        fall_seq.start(p_sequencer.reset_sequencer);
         rise_seq.randomize() with {
           delay_clk inside {[3:10]};
           delay_after_clk == 0;
         };
-        rise_seq.start(p_sequencer.toggle_sequencer);
+        rise_seq.start(p_sequencer.reset_sequencer);
       end
     join
 

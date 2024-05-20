@@ -11,14 +11,16 @@ class read_seq extends base_seq;
   // Properties
   rand int numRep = 1;
   rand bit[ADDR_WIDTH-1 : 0] readAddr [];
+  rand bit wait_resp = 0;
 
   // Constraint
   constraint numRepValid {
     /*  solve order constraints  */
   
     /*  rand variable constraints  */
-    numRep >= 0;
+    numRep > 0;
     soft numRep <= 100;
+    soft wait_resp == 0;
   }
 
   constraint sizeValid {
@@ -61,10 +63,26 @@ class read_seq extends base_seq;
 
   // Body of a sequence
   virtual task body();
-    fork
+    rsp = gfb_item#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH)::type_id::create("rsp");
+    if(wait_resp == 0) begin 
+      fork
+        begin 
+          while(rsp.FCMD != gfb_config::READ)
+            get_response(rsp);
+          wait_answers();
+        end
+      join_none
       drive_seq();
-      wait_answers();
-    join
+    end else begin 
+      fork
+        drive_seq();
+        begin 
+          while(rsp.FCMD != gfb_config::READ)
+            get_response(rsp);
+          wait_answers();
+        end
+      join
+    end
   endtask: body
 
   
@@ -91,7 +109,8 @@ endtask
 
 
 task read_seq::wait_answers();
-  repeat(numRep) begin
+  repeat(numRep - 1) begin
     get_response(rsp);
+    `uvm_info("GETRSP", $sformatf("Recieved rsp: %s\n", rsp.sprint()), UVM_DEBUG)
   end
 endtask

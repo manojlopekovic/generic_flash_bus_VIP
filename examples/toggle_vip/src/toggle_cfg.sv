@@ -9,7 +9,7 @@ Date          : 18.03.2023.
 class toggle_cfg extends uvm_object;
 
   // typedefs
-  typedef enum bit[1:0] {SYNCH_SYNCH, SYNCH_ASYNCH, ASYNCH_ASYNCH, ASYNCH_SYNCH} t_ToggleType;
+  typedef enum bit[2:0] {SYNCH, ASYNCH, SYNCH_SYNCH, SYNCH_ASYNCH, ASYNCH_ASYNCH, ASYNCH_SYNCH} t_ToggleType;
 
   // Config parameters
   uvm_active_passive_enum is_active_agent = UVM_ACTIVE;

@@ -18,7 +18,7 @@ class gfb_virt_seqr#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) extends
   // Sequencers
   gfb_sequencer master_sequencer;
   gfb_sequencer slave_sequencer;
-  toggle_sequencer toggle_sequencer;
+  toggle_sequencer reset_sequencer;
   clk_sequencer clock_sequencer;
 
   // Registration

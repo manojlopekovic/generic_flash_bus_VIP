@@ -72,7 +72,10 @@ task toggle_driver::_standard_toggle_driver_operation();
 endtask : _standard_toggle_driver_operation
 
 task toggle_driver::_send_to_if();
-  if(cfg.drivingType == toggle_cfg::SYNCH_SYNCH || (cfg.drivingType == toggle_cfg::SYNCH_ASYNCH && req.data != cfg.active_val) || (cfg.drivingType == toggle_cfg::ASYNCH_SYNCH && req.data == cfg.active_val)) begin
+  if(cfg.drivingType == toggle_cfg::SYNCH_SYNCH || 
+    (cfg.drivingType == toggle_cfg::SYNCH_ASYNCH && req.data != cfg.active_val) || 
+    (cfg.drivingType == toggle_cfg::ASYNCH_SYNCH && req.data == cfg.active_val) ||
+    (cfg.drivingType == toggle_cfg::SYNCH)) begin
     vif.cb.data <= req.data;
   end else begin 
     #req.delay_cb;
