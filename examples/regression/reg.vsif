@@ -1,0 +1,21 @@
+session my_regression {
+
+ 
+  top_dir: $ENV(TRAINING_HOME)/examples/regression/;
+
+  pre_session_script: "xrun -f $ENV(TRAINING_HOME)/run.f -c";
+  
+  max_runs_in_parallel: 1;
+}
+
+group my_tests {
+    scan_script: "vm_scan.pl shell.flt ius.flt";
+    count: 100;
+
+    test rep_test {
+      run_script: "xrun -f  $ENV(TRAINING_HOME)/run.f +UVM_TESTNAME=simple_rep_test +UVM_VERBOSITY=UVM_LOW -seed random -coverage all";
+      top_files: " $ENV(TRAINING_HOME)/tests/gfb_simple_rep_test.sv";
+      count: 100;
+    };
+
+}

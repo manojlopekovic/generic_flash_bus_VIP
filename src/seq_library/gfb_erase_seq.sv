@@ -13,6 +13,9 @@ class erase_seq extends base_seq;
   rand bit massErase = 0;
   rand bit[ADDR_WIDTH-1 : 0] eraseAddr[];
   rand bit wait_resp = 0; 
+  int transaction_ids [];
+
+  event trans_id_collected;
 
   // Constraint
   constraint numRepValid {
@@ -59,30 +62,24 @@ class erase_seq extends base_seq;
   endfunction
 
   extern virtual task drive_seq();
-  extern virtual task wait_answers();
+  extern virtual task wait_answer(int j);
 
   // Body of a sequence
   virtual task body();
+    transaction_ids = new[numRep];
     rsp = gfb_item#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH)::type_id::create("rsp");
-    if(wait_resp == 0) begin 
-      fork
-        begin 
-          while(rsp.FCMD != gfb_config::ERASE && rsp.FCMD != gfb_config::MASS_ERASE)
-            get_response(rsp);
-          wait_answers();
-        end
-      join_none
-      drive_seq();
-    end else begin 
-      fork
-        drive_seq();
-        begin 
-          while(rsp.FCMD != gfb_config::ERASE && rsp.FCMD != gfb_config::MASS_ERASE)
-            get_response(rsp);
-          wait_answers();
-        end
-      join
-    end
+    // if(wait_resp == 0) begin 
+    //   fork
+    //     wait_answers();
+    //   join_none
+    //   drive_seq();
+    // end else begin 
+    //   fork
+    //     drive_seq();
+    //     wait_answers();
+    //   join
+    // end
+    drive_seq();
   endtask: body
 
   
@@ -107,14 +104,21 @@ task erase_seq::drive_seq();
       FADDR == eraseAddr[i];
     });
     finish_item(req);
+    transaction_ids[i] = req.get_transaction_id();
+    wait_answer(i);
+    // ->trans_id_collected;
     i++;
   end
+  if(wait_resp)
+    wait fork;
 endtask
 
 
-task erase_seq::wait_answers();
-  repeat(numRep - 1) begin
-    get_response(rsp);
-    `uvm_info("GETRSP", $sformatf("Recieved rsp: %s\n", rsp.sprint()), UVM_DEBUG)
-  end
+task erase_seq::wait_answer(int j);
+  fork
+    begin 
+      get_response(rsp, transaction_ids[j]);
+      `uvm_info("GETRSP", $sformatf("Recieved rsp trans id: %0d, write: %s\n", transaction_ids[j], rsp.sprint()), UVM_LOW)
+    end
+  join_none
 endtask

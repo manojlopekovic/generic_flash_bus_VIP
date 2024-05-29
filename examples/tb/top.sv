@@ -27,19 +27,19 @@ module top;
 
 
   initial begin 
+    // uvm_event_pool::get_global("test_started").wait_trigger();
+
+    #5_000_000_000;
+
+    `uvm_fatal("TOP", "END OF SIMULAION")
+  end
+
+  initial begin 
     uvm_config_db#(virtual clk_if)::set(uvm_root::get(), "*", "clk_if0", clk_interface);
     uvm_config_db#(virtual toggle_interface)::set(uvm_root::get(), "*", "rst_inf", rst_n_if);
     uvm_config_db#(virtual gfb_interface)::set(uvm_root::get(),"*","intf", intf);
 
     run_test("base_test");
-  end
-
-
-  initial begin 
-    // uvm_event_pool::get_global("test_started").wait_trigger();
-
-    #5_000_000;
-    `uvm_fatal("TOP", "END OF SIMULAION")
   end
 
 endmodule : top

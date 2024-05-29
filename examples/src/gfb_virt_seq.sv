@@ -69,7 +69,7 @@ task gfb_virt_seq::seq_master();
     begin
       int i = 0;
       int n = 0;
-      std::randomize(n) with {n inside {[5:10]};};
+      std::randomize(n) with {n inside {[5:20]};};
       repeat(n) begin 
         randcase
           40 : begin 

@@ -340,7 +340,7 @@ task gfb_monitor::data_phase_stability();
     join_any
     disable fork;
   end
-  if(err != "") 
+  if(err != "" && `CLK_BLK.FRESP == '0) 
     `uvm_error(err, $sformatf("WRITE DATA HAS CHANGED WHILE WAITING FOR ANSWER IN DATA PHASE", ))
 endtask
 

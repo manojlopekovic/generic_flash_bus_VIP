@@ -8,7 +8,7 @@ Date          : 18.03.2023.
 
 class gfb_item#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) extends uvm_sequence_item;
 
-  typedef enum {ADDR_PHASE, DATA_PHASE, COLLECTED_OK, ERROR_ADDR, ERROR_DATA, ABORT_ADDR, ABORT_DATA} t_ItemState;
+  typedef enum {ADDR_PHASE, DATA_PHASE, COLLECTED_OK, ERROR_ADDR, ERROR_DATA, ABORT_ADDR, ABORT_DATA, RESET_DATA, RESET_ADDR} t_ItemState;
 
   // Interface properties
   rand gfb_config::t_AgtType it_type;

@@ -20,6 +20,7 @@ class gfb_driver#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) extends uv
   gfb_item addr_phase_item;
   gfb_item data_phase_item;
   int data_item_finished = 1;
+  gfb_item rsp_queue [$];
 
   semaphore phase_mutex;
   semaphore data_mutex;
@@ -111,7 +112,7 @@ endtask : std_driver_op
 
 task gfb_driver::master_send_to_if();
   fork
-    master_handle_data_phase();
+    // master_handle_data_phase();
     master_wait_driver_transaction_exit_case();
   join_none
   forever begin 
@@ -140,85 +141,91 @@ endtask
 
 task gfb_driver::master_handle_addr_phase();
   forever begin 
-    wait(`RESETn == 1'b1);
-    seq_item_port.get_next_item(req);
-    `uvm_info("M_DRV_REC", $sformatf("Master driver recieved item: %s\n", req.sprint()), UVM_HIGH)
-    if(`RESETn == 1'b1) begin
+    wait(`RESETn == 1);
+    addr_phase_item = null;
+    if(data_phase_item) begin 
+      fork
+        begin
+          @driver_transaction_exit_case_ev;
+          master_handle_data_phase();
+          // master_drive_data_phase();
+        end
+        begin
+          seq_item_port.get_next_item(req);
+          addr_phase_item = gfb_item#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH)::type_id::create("addr_phase_item");
+          addr_phase_item.copy(req);
+          addr_phase_item.set_id_info(req);
+          master_drive_addr_phase();
+          seq_item_port.item_done();
+          @driver_transaction_exit_case_ev;
+          master_drive_init();
+          // master_drive_init();
+          // master_handle_data_phase();
+          master_drive_data_phase();
+        end
+      join
+    end else begin 
+      seq_item_port.get_next_item(req);
+      addr_phase_item = gfb_item#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH)::type_id::create("addr_phase_item");
+      addr_phase_item.copy(req);
+      addr_phase_item.set_id_info(req);
       master_drive_addr_phase();
+      seq_item_port.item_done();
+      @driver_transaction_exit_case_ev;
+      master_drive_init();
+      // master_drive_init();
+      master_handle_data_phase();
+      master_drive_data_phase();
     end
-    seq_item_port.item_done();
   end
 endtask
 
 
 task gfb_driver::master_drive_addr_phase();
-  addr_phase_item = gfb_item#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH)::type_id::create("addr_phase_item");
-  addr_phase_item.copy(req);
   `MASTER_IF.FADDR <= addr_phase_item.FADDR;
   `MASTER_IF.FCMD <= addr_phase_item.FCMD;
-  // drive item to if
-  // wait for event, blocking <- from exit case function
-  // if necessary, pass item to data_phase via implemented fifo
-  // return 
-  // uvm_event_pool::get_global("driver_transaction_exit_case_ev").wait_trigger();
-  @driver_transaction_exit_case_ev;
-  if(data_item_finished == 0)
-    data_mutex.get(1);
-  if(`MASTER_IF.FREADY == '0)
-    if(`MASTER_IF.FRESP == '1) 
-      if(`MASTER_IF.FABORT == '1) 
-        addr_phase_item.item_state = gfb_item::ABORT_ADDR;
-      else
-        addr_phase_item.item_state = gfb_item::ERROR_ADDR;
-  data_phase_item = gfb_item#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH)::type_id::create("data_phase_item");
-  data_phase_item.copy(addr_phase_item);
-  data_phase_item.set_id_info(req);
-  data_item_finished = 0;
-  master_drive_init();
-  // Todo : add check how the item ended
-  phase_mutex.put(1);
 endtask
 
 
 task gfb_driver::master_handle_data_phase();
-  forever begin 
-    phase_mutex.get(1);
-    master_drive_data_phase();
+  if(data_phase_item) begin 
+    if(`MASTER_IF.FREADY == 1)
+      data_phase_item.item_state = gfb_item::COLLECTED_OK;
+    else if (`MASTER_IF.FRESP == 1) 
+      if(`MASTER_IF.FABORT == 1)
+        data_phase_item.item_state = gfb_item::ABORT_DATA;
+      else
+        data_phase_item.item_state = gfb_item::ERROR_DATA;
+    else
+      data_phase_item.item_state = gfb_item::RESET_DATA;
+    rsp = gfb_item#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH)::type_id::create("rsp");
+    rsp.copy(data_phase_item);
+    rsp.set_id_info(data_phase_item);
+    seq_item_port.put(rsp);
+    data_phase_item = null;
   end
 endtask
 
 
 task gfb_driver::master_drive_data_phase();
-  if(data_phase_item.FCMD == gfb_config::WRITE || data_phase_item.FCMD == gfb_config::ROW_WRITE && data_phase_item.item_state != gfb_item::ERROR_ADDR && data_phase_item.item_state != gfb_item::ABORT_ADDR)
-    `MASTER_IF.FWDATA <= data_phase_item.FWDATA;
-  else
-    `MASTER_IF.FWDATA <= 'X;
-  // uvm_event_pool::get_global("driver_transaction_exit_case_ev").wait_trigger();
-  if(cfg.master_abort_en == '1 && data_phase_item.FCMD != gfb_config::IDLE) begin 
-    fork
-      @driver_transaction_exit_case_ev;
-      begin 
-        repeat(data_phase_item.abort_after) @`CLK_BLK;
-        `MASTER_IF.FABORT <= '1;
-      end
-    join_any
-    disable fork;
-  end else begin
-    @driver_transaction_exit_case_ev;
-  end
-  data_item_finished = 1;
-  data_mutex.put(1);
-  fork
-    begin   
-      if(`MASTER_IF.FREADY == '0)
-        @(posedge `MASTER_IF.FREADY);
-      `MASTER_IF.FABORT <= '0;
-      rsp = gfb_item#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH)::type_id::create("rsp");
-      rsp.set_id_info(data_phase_item);
-      rsp.copy(data_phase_item);
-      seq_item_port.put(rsp);
+  if(`MASTER_IF.FREADY == 1) begin 
+    data_phase_item = gfb_item#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH)::type_id::create("data_phase_item");
+    data_phase_item.copy(addr_phase_item);
+    data_phase_item.set_id_info(addr_phase_item);
+    if(addr_phase_item.FCMD == gfb_config::WRITE || addr_phase_item.FCMD == gfb_config::ROW_WRITE) begin
+      `MASTER_IF.FWDATA <= addr_phase_item.FWDATA;
     end
-  join_none
+  end else if(`MASTER_IF.FRESP == 1) begin 
+    if(`MASTER_IF.FABORT == 1)
+      addr_phase_item.item_state = gfb_item::ABORT_ADDR;
+    else
+      addr_phase_item.item_state = gfb_item::ERROR_ADDR;
+    rsp = gfb_item#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH)::type_id::create("rsp");
+    rsp.copy(addr_phase_item);
+    rsp.set_id_info(addr_phase_item);
+    seq_item_port.put(rsp);
+  end
+
 endtask
 
 
