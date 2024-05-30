@@ -60,6 +60,8 @@ class gfb_driver#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) extends uv
   extern virtual task master_drive_addr_phase();
   extern virtual task master_handle_data_phase();
   extern virtual task master_drive_data_phase();
+  extern virtual task master_send_rsp(gfb_item#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH) item); 
+  extern virtual task master_handle_recieve_item();
 
   // Slave
   extern virtual task slave_send_to_if();
@@ -148,36 +150,35 @@ task gfb_driver::master_handle_addr_phase();
         begin
           @driver_transaction_exit_case_ev;
           master_handle_data_phase();
+          phase_mutex.put(1);
           // master_drive_data_phase();
         end
         begin
-          seq_item_port.get_next_item(req);
-          addr_phase_item = gfb_item#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH)::type_id::create("addr_phase_item");
-          addr_phase_item.copy(req);
-          addr_phase_item.set_id_info(req);
-          master_drive_addr_phase();
-          seq_item_port.item_done();
-          @driver_transaction_exit_case_ev;
-          master_drive_init();
+          master_handle_recieve_item();
+          phase_mutex.get(1);
           // master_drive_init();
           // master_handle_data_phase();
           master_drive_data_phase();
         end
       join
     end else begin 
-      seq_item_port.get_next_item(req);
-      addr_phase_item = gfb_item#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH)::type_id::create("addr_phase_item");
-      addr_phase_item.copy(req);
-      addr_phase_item.set_id_info(req);
-      master_drive_addr_phase();
-      seq_item_port.item_done();
-      @driver_transaction_exit_case_ev;
-      master_drive_init();
-      // master_drive_init();
+      master_handle_recieve_item();
       master_handle_data_phase();
       master_drive_data_phase();
     end
   end
+endtask
+
+
+task gfb_driver::master_handle_recieve_item();
+  seq_item_port.get_next_item(req);
+  addr_phase_item = gfb_item#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH)::type_id::create("addr_phase_item");
+  addr_phase_item.copy(req);
+  addr_phase_item.set_id_info(req);
+  master_drive_addr_phase();
+  seq_item_port.item_done();
+  @driver_transaction_exit_case_ev;
+  master_drive_init();
 endtask
 
 
@@ -198,10 +199,7 @@ task gfb_driver::master_handle_data_phase();
         data_phase_item.item_state = gfb_item::ERROR_DATA;
     else
       data_phase_item.item_state = gfb_item::RESET_DATA;
-    rsp = gfb_item#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH)::type_id::create("rsp");
-    rsp.copy(data_phase_item);
-    rsp.set_id_info(data_phase_item);
-    seq_item_port.put(rsp);
+    master_send_rsp(data_phase_item);
     data_phase_item = null;
   end
 endtask
@@ -220,12 +218,16 @@ task gfb_driver::master_drive_data_phase();
       addr_phase_item.item_state = gfb_item::ABORT_ADDR;
     else
       addr_phase_item.item_state = gfb_item::ERROR_ADDR;
-    rsp = gfb_item#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH)::type_id::create("rsp");
-    rsp.copy(addr_phase_item);
-    rsp.set_id_info(addr_phase_item);
-    seq_item_port.put(rsp);
+    master_send_rsp(addr_phase_item);
   end
+endtask
 
+
+task gfb_driver::master_send_rsp(gfb_item#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH) item); 
+  rsp = gfb_item#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH)::type_id::create("rsp");
+  rsp.copy(item);
+  rsp.set_id_info(item);
+  seq_item_port.put(rsp);
 endtask
 
 
