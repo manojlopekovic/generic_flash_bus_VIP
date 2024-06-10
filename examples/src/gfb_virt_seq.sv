@@ -10,6 +10,7 @@ class gfb_virt_seq#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) extends 
 
   // Properties
   rand bit on_the_fly_reset = 0;
+  
 
   // Registration
   `uvm_object_param_utils(gfb_virt_seq#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH))
@@ -65,16 +66,29 @@ task gfb_virt_seq::seq_master();
   seq_read = read_seq::type_id::create("read_seq");
   seq_erase = erase_seq::type_id::create("erase_seq");
 
+  
+  if(on_the_fly_reset == 1) fork begin 
+    toggle_fall_seq fall_seq = toggle_fall_seq::type_id::create("fall_seq");
+    toggle_rise_seq rise_seq = toggle_rise_seq::type_id::create("rise_seq");
+
+    // Todo : add assert to all randomizations
+    fall_seq.delay_val.constraint_mode(0);
+    fall_seq.randomize() with {delay_clk inside {[1:1000]};};
+    fall_seq.start(p_sequencer.reset_sequencer);
+    rise_seq.randomize() with {delay_clk inside {[1:20]};};
+    rise_seq.start(p_sequencer.reset_sequencer);
+  end join_none
+
   fork
     begin
       int i = 0;
-      int n = 0;
-      std::randomize(n) with {n inside {[5:20]};};
+      int n = 3;
+      std::randomize(n) with {n inside {[5:50]};};
       repeat(n) begin 
         randcase
           40 : begin 
             seq_write.randomize() with {
-              numRep < 20; 
+              numRep < 5; 
               if(i == (n-1))
                 wait_resp == 1;
               else 
@@ -84,7 +98,7 @@ task gfb_virt_seq::seq_master();
           end
           40 : begin 
             seq_read.randomize() with {
-              numRep < 20; 
+              numRep < 5; 
               if(i == (n-1))
                 wait_resp == 1;
               else 
@@ -94,7 +108,7 @@ task gfb_virt_seq::seq_master();
           end 
           20 : begin 
             seq_erase.randomize() with {
-              numRep < 20; 
+              numRep < 5; 
               if(i == (n-1))
                 wait_resp == 1;
               else 
@@ -105,16 +119,6 @@ task gfb_virt_seq::seq_master();
         endcase
         i++;
       end
-    end
-    if(on_the_fly_reset == 1) begin 
-      toggle_fall_seq fall_seq = toggle_fall_seq::type_id::create("fall_seq");
-      toggle_rise_seq rise_seq = toggle_rise_seq::type_id::create("rise_seq");
-
-      // Todo : add assert to all randomizations
-      fall_seq.randomize() with {delay_clk >= 1;};
-      fall_seq.start(p_sequencer.reset_sequencer);
-      rise_seq.randomize() with {delay_clk inside {[1:10]};};
-      rise_seq.start(p_sequencer.reset_sequencer);
     end
   join 
    

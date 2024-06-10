@@ -11,6 +11,7 @@ class gfb_monitor#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) extends u
 
   // Config
   gfb_config cfg;
+  logic inactive_val;
 
   // Properties
   virtual gfb_interface vif;
@@ -21,6 +22,11 @@ class gfb_monitor#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) extends u
   semaphore data_mutex;
 
   event monitor_transaction_exit_case_ev;
+
+  
+  // Slave helper items
+  gfb_item#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH) ap_item_cmd;
+  gfb_item#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH) dp_item_cmd;
 
   // Registration
   `uvm_component_param_utils(gfb_monitor#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH))
@@ -59,7 +65,6 @@ class gfb_monitor#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) extends u
   extern virtual task collect_addr_phase();
   extern virtual task collect_data_phase();
   extern virtual task monitor_wait_exit_cases();
-  extern virtual task reset_watcher();
 
   // Protocol checks
   extern virtual task start_protocol_checks();
@@ -70,11 +75,13 @@ class gfb_monitor#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) extends u
   extern virtual task data_phase_stability();
   extern virtual task check_error_response();
   extern virtual task check_abort_response();
+  extern virtual task check_reset_values();
   extern virtual task check_transaction_response();
 
   // Reactive slave
   extern virtual task handle_reactive_slave();
-  extern virtual task handle_reactive_command(gfb_item it);
+  extern virtual function void handle_reactive_command();
+  extern virtual function void collect_ap_item();
 
   // Protocol checkers
 
@@ -90,6 +97,12 @@ function void gfb_monitor::build_phase(uvm_phase phase);
   
   if(cfg.agent_type == gfb_config::SLAVE)
     command_port = new("command_port", this);
+
+  
+  inactive_val =  cfg.inactive_value == gfb_config::INACTIVE_ZERO ?   '0 :
+                  cfg.inactive_value == gfb_config::INACTIVE_ONE  ?   '1 :
+                  cfg.inactive_value == gfb_config::INACTIVE_X    ?   'X :
+                                                                      'Z;
 endfunction: build_phase
 
 
@@ -97,7 +110,6 @@ task gfb_monitor::run_phase(uvm_phase phase);
   
   fork
     collect_item();
-    reset_watcher();
     start_protocol_checks();
   join
   
@@ -126,7 +138,11 @@ task gfb_monitor::collect_addr_phase();
   if(data_phase_item != null)
     data_mutex.get(1);
   // If address phase of next item started, report error in address phase
-  if(addr_phase_item != null && addr_phase_item.FCMD != gfb_config::IDLE && (`CLK_BLK.FREADY === 0 && `CLK_BLK.FRESP === 1)) begin
+  if(`RESETn == 0) begin
+    if(addr_phase_item == null)
+      addr_phase_item = gfb_item#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH)::type_id::create("addr_phase_item");
+    addr_phase_item.item_state = gfb_item::RESET_ADDR;
+  end else if(addr_phase_item != null && addr_phase_item.FCMD != gfb_config::IDLE && (`CLK_BLK.FREADY === 0 && `CLK_BLK.FRESP === 1)) begin
     if(`CLK_BLK.FABORT === 1)
       addr_phase_item.item_state = gfb_item::ABORT_ADDR;
     else
@@ -155,12 +171,14 @@ task gfb_monitor::collect_data_phase();
     data_phase_item.FWDATA = `CLK_BLK.FWDATA;
     // Todo : add check how the item ended
     // Address phase error should not change, and this item won't be sent to monitor(TBD)
-    if(`CLK_BLK.FRESP === 1 && (data_phase_item.item_state != gfb_item::ERROR_ADDR && data_phase_item.item_state != gfb_item::ABORT_ADDR)) begin
+    if(`RESETn == 0)
+      data_phase_item.item_state = gfb_item::RESET_DATA;
+    else if(`CLK_BLK.FRESP === 1 && (data_phase_item.item_state != gfb_item::ERROR_ADDR && data_phase_item.item_state != gfb_item::ABORT_ADDR)) begin
       if(`CLK_BLK.FABORT === 1)
         data_phase_item.item_state = gfb_item::ABORT_DATA;
       else
         data_phase_item.item_state = gfb_item::ERROR_DATA;
-    end else if(data_phase_item.item_state != gfb_item::ERROR_ADDR && data_phase_item.item_state != gfb_item::ABORT_ADDR)
+    end else if(data_phase_item.item_state != gfb_item::ERROR_ADDR && data_phase_item.item_state != gfb_item::ABORT_ADDR && data_phase_item.item_state != gfb_item::RESET_ADDR)
       data_phase_item.item_state = gfb_item::COLLECTED_OK;
     `uvm_info("MONCOL", $sformatf("%s monitor collected item:\n%s", cfg.agent_type.name(), data_phase_item.sprint()), UVM_MEDIUM)
     transaction_port.write(data_phase_item);
@@ -171,93 +189,146 @@ endtask: collect_data_phase
 
 
 task gfb_monitor::monitor_wait_exit_cases();
-  forever begin 
-    if(`CLK_BLK.FREADY !== '1) begin
-      if(`CLK_BLK.FRESP !== 1) begin 
-        fork
-          @(posedge `CLK_BLK.FREADY);
-          @(posedge `CLK_BLK.FRESP);
-        join_any
-        disable fork;
+  fork
+    forever begin 
+      @(negedge `RESETn);
+    end 
+    forever begin 
+      wait(`RESETn == 1);
+      if(`RESETn === 1) begin 
+        if(`CLK_BLK.FREADY !== '1) begin
+          if(`CLK_BLK.FRESP !== 1) begin 
+            fork
+              @(posedge `CLK_BLK.FREADY);
+              @(posedge `CLK_BLK.FRESP);
+              @(negedge `RESETn);
+            join_any
+            disable fork;
+          end
+        end
       end
+      -> monitor_transaction_exit_case_ev;
+      @`CLK_BLK;
     end
-    -> monitor_transaction_exit_case_ev;
-    @`CLK_BLK;
-  end
+  join
 endtask: collect_data_phase
 
 
-task gfb_monitor::reset_watcher();
-  forever begin 
-    @(negedge vif.FRESETn);
-    @(posedge vif.FRESETn);
-    uvm_event_pool::get_global("reset_happened_ev").trigger();
-  end
-endtask: reset_watcher
 
 
 // SLAVE
+// *****************************************************************************************
 
 task gfb_monitor::handle_reactive_slave();
+  collect_ap_item();
+  command_port.write(ap_item_cmd);
+  @monitor_transaction_exit_case_ev;
   forever begin 
-    slave_item = gfb_item#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH)::type_id::create("slave_item");
-    slave_item.FCMD = `SLAVE_IF.FCMD;
-    slave_item.FADDR = `SLAVE_IF.FADDR;
-    slave_item.it_type = gfb_config::SLAVE;
-    command_port.write(slave_item);
-    fork
-      @(`SLAVE_IF.FCMD);
-      begin
-        @(monitor_transaction_exit_case_ev);
-        @`CLK_BLK;
+    wait(`RESETn == 1);
+    if(ap_item_cmd == null) begin
+      collect_ap_item();
+      command_port.write(ap_item_cmd);
+      @monitor_transaction_exit_case_ev;
+    end
+    if(`RESETn == 1) begin 
+      if(ap_item_cmd.FCMD == gfb_config::IDLE && `SLAVE_IF.FCMD == gfb_config::IDLE) begin
+        fork
+          @(negedge `RESETn);
+          @(`SLAVE_IF.FCMD);
+        join_any
+        disable fork;
+      end else begin
+        collect_ap_item();
+        dp_item_cmd = gfb_item#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH)::type_id::create("dp_item_cmd");
+        dp_item_cmd.copy(ap_item_cmd);
+        dp_item_cmd.item_state = gfb_item::DATA_PHASE;
+        if(`SLAVE_IF.FRESP === 0 || (`SLAVE_IF.FRESP === 1 && `SLAVE_IF.FREADY == 1)) begin
+          command_port.write(dp_item_cmd);
+          fork
+            @monitor_transaction_exit_case_ev;
+            @(negedge `RESETn);
+            if(`SLAVE_IF.FABORT === 0 || (`SLAVE_IF.FABORT === 1 && `SLAVE_IF.FREADY === 1)) begin
+              // @(negedge `SLAVE_IF.FABORT);
+              @(posedge `SLAVE_IF.FABORT);
+              if(`SLAVE_IF.FREADY)
+                @monitor_transaction_exit_case_ev;
+            end
+          join_any
+          disable fork;
+          if(`RESETn == 1) begin 
+            if(`SLAVE_IF.FABORT == 1 && `SLAVE_IF.FRESP == 0 && `SLAVE_IF.FREADY == 0) begin 
+              dp_item_cmd.item_state = gfb_item::ABORT_DATA;
+              if(`SLAVE_IF.FRESP === 0 || (`SLAVE_IF.FRESP === 1 && `SLAVE_IF.FREADY == 1)) begin
+                command_port.write(dp_item_cmd);
+                @monitor_transaction_exit_case_ev;
+              end 
+            end
+            if(`SLAVE_IF.FREADY == 1) begin 
+              if(dp_item_cmd.FCMD == gfb_config::WRITE || dp_item_cmd.FCMD == gfb_config::ROW_WRITE)
+                dp_item_cmd.FWDATA = `SLAVE_IF.FWDATA;
+              handle_reactive_command();
+            end
+          end
+        end 
+        if(`SLAVE_IF.FRESP === 1 && `SLAVE_IF.FREADY == 0)
+        fork
+          @monitor_transaction_exit_case_ev;
+          @(negedge `RESETn);
+        join_any
+        disable fork;
       end
-    join_any
-    disable fork;
-    if(slave_item.FCMD != gfb_config::IDLE) begin
-      fork
-        handle_reactive_command(slave_item);
-      join_none
+    end 
+    if(`RESETn == 0) begin
+      ap_item_cmd = null;
     end
   end
 endtask
 
 
-task gfb_monitor::handle_reactive_command(gfb_item it);
-  gfb_item#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH) temp = new("temp");
-  temp.copy(it);
-  if(`SLAVE_IF.FREADY == 1) begin 
-    @(monitor_transaction_exit_case_ev);
-    if(`SLAVE_IF.FREADY == 1) begin 
-      case(temp.FCMD)
-        gfb_config::WRITE, gfb_config::ROW_WRITE : begin 
+function void gfb_monitor::collect_ap_item();
+  ap_item_cmd = gfb_item#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH)::type_id::create("ap_item_cmd");
+  ap_item_cmd.FCMD = `SLAVE_IF.FCMD;
+  ap_item_cmd.FADDR = `SLAVE_IF.FADDR;
+  ap_item_cmd.it_type = gfb_config::SLAVE;
+  ap_item_cmd.item_state = gfb_item::ADDR_PHASE;
+endfunction
 
-        end
-        gfb_config::ERASE : begin 
 
-        end
-        gfb_config::MASS_ERASE : begin 
+function void gfb_monitor::handle_reactive_command();
+  case(dp_item_cmd.FCMD)
+    gfb_config::WRITE, gfb_config::ROW_WRITE : begin 
 
-        end
-      endcase
     end
-  end
-endtask
+    gfb_config::ERASE : begin 
+
+    end
+    gfb_config::MASS_ERASE : begin 
+
+    end
+  endcase
+endfunction
 
 // *****************************************************************************************
 // Protocol checks
 task gfb_monitor::start_protocol_checks();
   @(negedge `RESETn);
   @(posedge `RESETn);
-  fork
-    // Todo : add checker disable, as they will be implemented as assertions also
-    check_address_alignment();
-    check_command_legal();
-    // Checkers implemented only in monitor
-    check_phase_stability();
-    check_error_response();
-    check_abort_response();
-    check_transaction_response();
-  join
+  forever begin
+    wait(`RESETn == 1);
+    fork
+      // Todo : add checker disable, as they will be implemented as assertions also
+      check_address_alignment();
+      check_command_legal();
+      // Checkers implemented only in monitor
+      check_phase_stability();
+      check_error_response();
+      check_abort_response();
+      check_transaction_response();
+      check_reset_values();
+    join_any
+    disable fork;
+    @`CLK_BLK;
+  end
 endtask
 
 
@@ -289,7 +360,6 @@ task gfb_monitor::check_command_legal();
     cmd = `CLK_BLK.FCMD;
     if(cmd.name() == "")
       `uvm_error("ILLCMD", $sformatf("Illegal command value : %3b", cmd));
-      
   end
 endtask 
 
@@ -349,43 +419,51 @@ task gfb_monitor::check_error_response();
   forever begin 
     if(`CLK_BLK.FRESP !== '1)
       @(posedge `CLK_BLK.FRESP);
-    if((addr_phase_item.FCMD == gfb_config::IDLE && data_phase_item == null) || (data_phase_item.FCMD == gfb_config::IDLE))
-      `uvm_error("IDLEERR", "IDLE TRANSACTION CANNOT BE ERRORED")
-    if(`CLK_BLK.FREADY != '0)
-      `uvm_error("ERR1CYC", "FREADY is HIGH in first cycle of ERROR RESPONSE");
-    @`CLK_BLK;
-    if(`CLK_BLK.FREADY != '1)
-      `uvm_error("ERR2CYC", "FREADY is LOW in second cycle of ERROR RESPONSE");
-    if(`CLK_BLK.FRESP != '1)
-      `uvm_error("ERR2CYC", "FRESP is LOW in second cycle of ERROR RESPONSE");
-    @`CLK_BLK;    
+    if(`RESETn == 1) begin
+      if((addr_phase_item.FCMD == gfb_config::IDLE && data_phase_item == null) || (data_phase_item.FCMD == gfb_config::IDLE))
+        `uvm_error("IDLEERR", "IDLE TRANSACTION CANNOT BE ERRORED")
+      if(`CLK_BLK.FREADY != '0)
+        `uvm_error("ERR1CYC", "FREADY is HIGH in first cycle of ERROR RESPONSE");
+      @`CLK_BLK;
+      if(`RESETn == 1) begin
+        if(`CLK_BLK.FREADY != '1)
+          `uvm_error("ERR2CYC", "FREADY is LOW in second cycle of ERROR RESPONSE");
+        if(`CLK_BLK.FRESP != '1)
+          `uvm_error("ERR2CYC", "FRESP is LOW in second cycle of ERROR RESPONSE");
+        @`CLK_BLK;    
+      end
+    end
   end
 endtask
 
 
 task gfb_monitor::check_abort_response();
   forever begin 
-    if(`CLK_BLK.FABORT !== '1) begin 
+    wait(`RESETn == 1);
+    if(`CLK_BLK.FABORT !== '1 || (`CLK_BLK.FABORT === 1 && `CLK_BLK.FREADY === 1)) begin 
       @(posedge `CLK_BLK.FABORT);
       if((addr_phase_item.FCMD == gfb_config::IDLE && data_phase_item == null) || (data_phase_item.FCMD == gfb_config::IDLE))
         `uvm_error("ABORTIDLE", "ABORT happened on IDLE command");    
     end
-    fork
-      begin
-        if(`CLK_BLK.FREADY === '0 && `CLK_BLK.FRESP === '0)
-          @monitor_transaction_exit_case_ev;
-        if(`CLK_BLK.FREADY !== '1)
-          @(posedge `CLK_BLK.FREADY);
-        if(`CLK_BLK.FABORT !== '1)
-          `uvm_error("ABORTERR", "ABORT went to LOW before end of abort sequence")
-        @`CLK_BLK;
-      end
-      begin 
-        repeat(cfg.max_abort_wait)@`CLK_BLK;
-        `uvm_error("ABORTNORESP", "ABORT request answer wait time exceeded");        
-      end
-    join_any
-    disable fork;
+    if(`RESETn == 1) begin
+      fork
+        begin
+          if(`CLK_BLK.FREADY === '0 && `CLK_BLK.FRESP === '0)
+            @monitor_transaction_exit_case_ev;
+            if(`CLK_BLK.FREADY !== '1)
+              @(posedge `CLK_BLK.FREADY);
+            if(`CLK_BLK.FABORT !== '1)
+              `uvm_error("ABORTERR", "ABORT went to LOW before end of abort sequence")
+        end
+        begin 
+          repeat(cfg.max_abort_wait)@`CLK_BLK;
+          if(`CLK_BLK.FRESP === 0 && `CLK_BLK.FREADY === 0)
+            `uvm_error("ABORTNORESP", "ABORT request answer wait time exceeded");        
+        end
+        @(negedge `RESETn);
+      join_any
+      disable fork;
+    end
   end
 endtask
 
@@ -393,22 +471,64 @@ endtask
 task gfb_monitor::check_transaction_response();
   forever begin 
     @monitor_transaction_exit_case_ev;
-    if(`CLK_BLK.FCMD != gfb_config::IDLE) begin 
-      fork
-        begin 
-          fork
-            begin 
-              @monitor_transaction_exit_case_ev;
-            end
-            begin
-              repeat(cfg.max_response_wait) @`CLK_BLK;
-              `uvm_error("NORESP", "MAX wait response time exceeded");
-            end
-          join_any
-          disable fork;
-        end
-      join_none
+    if(`RESETn == 1) begin
+      if(`CLK_BLK.FCMD != gfb_config::IDLE) begin 
+        fork
+          begin 
+            fork
+              begin 
+                @monitor_transaction_exit_case_ev;
+              end
+              begin
+                repeat(cfg.max_response_wait) @`CLK_BLK;
+                `uvm_error("NORESP", "MAX wait response time exceeded");
+              end
+              @(negedge `RESETn);
+            join_any
+            disable fork;
+          end
+        join_none
+      end
     end
   end
+endtask
+
+task gfb_monitor::check_reset_values();
+  @(negedge `RESETn);
+  // Todo : change this implementation
+  #1;
+  if(vif.FCMD != gfb_config::IDLE)
+    `uvm_error("RSTVAL", "Command not idle on reset");
+  if(vif.FABORT != 0)
+    `uvm_error("RSTVAL", "Abort asserted on reset");
+  if(vif.FRESP == 1)
+    `uvm_error("RSTVAL", "Resp asserted on reset");
+  if(vif.FREADY == 1)
+    `uvm_error("RSTVAL", "Ready asserted on reset");
+  fork
+    @(posedge `RESETn);
+    @(vif.FCMD) begin 
+      `uvm_error("RSTVAL", "FCMD changed during reset");
+    end
+    @(vif.FADDR) begin 
+      `uvm_error("RSTVAL", "FADDR changed during reset");
+    end
+    @(vif.FWDATA) begin 
+      `uvm_error("RSTVAL", "FWDATA changed during reset");
+    end
+    @(vif.FABORT) begin 
+      `uvm_error("RSTVAL", "FABORT changed during reset");
+    end
+    @(vif.FREADY) begin 
+      `uvm_error("RSTVAL", "FREADY changed during reset");
+    end
+    @(vif.FRESP) begin 
+      `uvm_error("RSTVAL", "FRESP changed during reset");
+    end
+    @(vif.FRDATA) begin 
+      `uvm_error("RSTVAL", "FWDATA changed during reset");
+    end
+  join_any
+  disable fork;
 endtask
 // *****************************************************************************************

@@ -20,8 +20,8 @@ module top;
   assign clk = clk_interface.clk;
 
 
-  assign resetn = rst_n_if.data;
   toggle_interface rst_n_if(clk);
+  assign resetn = rst_n_if.data;
 
   gfb_interface intf(clk, resetn);
 
@@ -29,7 +29,7 @@ module top;
   initial begin 
     // uvm_event_pool::get_global("test_started").wait_trigger();
 
-    #5_000_000_000;
+    #50_721_000;
 
     `uvm_fatal("TOP", "END OF SIMULAION")
   end

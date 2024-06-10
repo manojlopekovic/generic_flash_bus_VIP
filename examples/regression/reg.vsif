@@ -10,12 +10,12 @@ session my_regression {
 
 group my_tests {
     scan_script: "vm_scan.pl shell.flt ius.flt";
-    count: 100;
+    count: 2000;
 
     test rep_test {
       run_script: "xrun -f  $ENV(TRAINING_HOME)/run.f +UVM_TESTNAME=simple_rep_test +UVM_VERBOSITY=UVM_LOW -seed random -coverage all";
       top_files: " $ENV(TRAINING_HOME)/tests/gfb_simple_rep_test.sv";
-      count: 100;
+      count: 2000;
     };
 
 }

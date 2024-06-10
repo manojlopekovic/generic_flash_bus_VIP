@@ -127,7 +127,7 @@ task gfb_scoreboard::_standard_scoreboard_operation();
       begin 
         slaveFIFO.get(hlpItem2);
         $cast(slaveItem, hlpItem2.clone());
-        `uvm_info(get_full_name(), $sformatf("SCOREBOARD SLAVE ITEM : \n %s", slaveItem.sprint()), UVM_LOW)
+        // `uvm_info(get_full_name(), $sformatf("SCOREBOARD SLAVE ITEM : \n %s", slaveItem.sprint()), UVM_LOW)
       end
     join
     compare_items();

@@ -107,6 +107,7 @@ task read_seq::drive_seq();
   end
   if(wait_resp)
     wait fork;
+  $display(1);
 endtask
 
 
@@ -114,7 +115,8 @@ task read_seq::wait_answer(int j);
   fork
     begin 
       get_response(rsp, transaction_ids[j]);
-      `uvm_info("GETRSP", $sformatf("Recieved rsp trans id: %0d, write: %s\n", transaction_ids[j], rsp.sprint()), UVM_LOW)
+      $display("%d, %d", j, transaction_ids[j]);
+      `uvm_info("GETRSP", $sformatf("Recieved rsp trans id: %0d, write: %s\n", transaction_ids[j], rsp.sprint()), UVM_MEDIUM)
     end
   join_none
 endtask

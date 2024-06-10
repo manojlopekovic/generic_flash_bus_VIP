@@ -49,6 +49,7 @@ class gfb_config#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) extends uv
   rand int unsigned max_wait_states_allowed;
   rand int unsigned slave_wait_state_rate;
   rand bit mem_model_exists = '1;
+  rand int unsigned slave_abort_rate;
 
   // #### CHECKS ####
   rand int unsigned max_abort_wait;
@@ -77,6 +78,7 @@ class gfb_config#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) extends uv
     `uvm_field_int(max_waits_for_abort, UVM_ALL_ON)
     `uvm_field_int(slave_error_en, UVM_ALL_ON)
     `uvm_field_int(slave_error_rate, UVM_ALL_ON)
+    `uvm_field_int(slave_abort_rate, UVM_ALL_ON)
     `uvm_field_int(slave_wait_state_en, UVM_ALL_ON)
     `uvm_field_int(max_wait_states_allowed, UVM_ALL_ON)
     `uvm_field_int(slave_wait_state_rate, UVM_ALL_ON)
@@ -107,6 +109,7 @@ class gfb_config#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) extends uv
   
     /*  rand variable constraints  */
     slave_error_rate inside {[0:100]};
+    slave_abort_rate inside {[0:100]};
     slave_wait_state_rate inside {[0:100]};
     soft max_wait_states_allowed == 128;
     soft mem_model_exists == 1;

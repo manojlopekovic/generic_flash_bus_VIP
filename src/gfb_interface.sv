@@ -30,7 +30,6 @@ interface gfb_interface#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32)(inp
     input FRDATA, FREADY, FRESP;
     output FADDR, FCMD, FWDATA, FABORT;
   endclocking
-
   
   clocking slave_cb @(posedge FCLK);
     output FRDATA, FREADY, FRESP;

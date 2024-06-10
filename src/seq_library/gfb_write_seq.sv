@@ -129,7 +129,7 @@ task write_seq::wait_answer(int j);
   fork
     begin 
       get_response(rsp, transaction_ids[j]);
-      `uvm_info("GETRSP", $sformatf("Recieved rsp trans id: %0d, write: %s\n", transaction_ids[j], rsp.sprint()), UVM_LOW)
+      `uvm_info("GETRSP", $sformatf("Recieved rsp trans id: %0d, write: %s\n", transaction_ids[j], rsp.sprint()), UVM_MEDIUM)
     end
   join_none
 endtask

@@ -14,6 +14,9 @@ class gfb_virt_seqr#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) extends
   gfb_config slave_cfg;
   toggle_cfg toggle_cfg;
   clk_conf clk_cfg;
+  
+  // Virtual interface
+  virtual gfb_interface vif;
 
   // Sequencers
   gfb_sequencer master_sequencer;
@@ -39,6 +42,9 @@ class gfb_virt_seqr#(ADDR_WIDTH = 12, WRITE_WIDTH = 32, READ_WIDTH = 32) extends
       `uvm_fatal(get_full_name(), "Failed to get  toggle_cfg in virtual sequencer")
     if(!uvm_config_db#(clk_conf)::get(this, "", "clk_conf", clk_cfg))
       `uvm_fatal(get_full_name(), "Failed to get clk_cfg in virtual sequencer")
+
+    if(!uvm_config_db#(virtual gfb_interface)::get(this, "", "intf", vif))
+      `uvm_fatal(get_type_name(),"Failed to get interface in driver")
 
 
   endfunction: build_phase

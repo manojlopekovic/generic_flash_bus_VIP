@@ -17,6 +17,8 @@ class erase_seq extends base_seq;
 
   event trans_id_collected;
 
+  gfb_item#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH) item; 
+
   // Constraint
   constraint numRepValid {
     /*  solve order constraints  */
@@ -87,6 +89,7 @@ endclass //base_seq extends uvm_sequence(_item)
 
 task erase_seq::drive_seq();
   int i = 0;
+  item =  gfb_item#(ADDR_WIDTH, WRITE_WIDTH, READ_WIDTH)::type_id::create("item");
   `uvm_info(get_full_name(), "Executing erase_seq", UVM_HIGH)
   repeat(numRep) begin 
     `uvm_create(req);
@@ -103,6 +106,7 @@ task erase_seq::drive_seq();
       // FCMD == massErase == 0 ? gfb_config::MASS_ERASE : gfb_config::ERASE;
       FADDR == eraseAddr[i];
     });
+    item.copy(req);
     finish_item(req);
     transaction_ids[i] = req.get_transaction_id();
     wait_answer(i);
@@ -117,8 +121,11 @@ endtask
 task erase_seq::wait_answer(int j);
   fork
     begin 
+      $display("GET: %0d | %0d", j, transaction_ids[j]);
+      `uvm_info("REQ", $sformatf("GET trans id: %0d, write: %s\n", transaction_ids[j], item.sprint()), UVM_LOW)
       get_response(rsp, transaction_ids[j]);
       `uvm_info("GETRSP", $sformatf("Recieved rsp trans id: %0d, write: %s\n", transaction_ids[j], rsp.sprint()), UVM_LOW)
+      $display("GOTTEN: %0d | %0d", j, transaction_ids[j]);
     end
   join_none
 endtask

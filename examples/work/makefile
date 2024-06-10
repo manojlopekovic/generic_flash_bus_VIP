@@ -3,7 +3,8 @@ test_name = simple_rep_test
 #UVM VERBOSITY
 uvm_verbosity = UVM_LOW 
 #UVM RNG SEED
-rand_seed = random
+rand_seed = -1464590367
+# rand_seed = random
 # quit count for uvm
 quit_count = 1
 # message for git commit

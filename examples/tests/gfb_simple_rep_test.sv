@@ -48,7 +48,7 @@ task simple_rep_test::run_phase(uvm_phase phase);
   // uvm_event_pool::get_global("reset_happened_ev").wait_trigger();
   // `uvm_info(get_full_name(), "Initial reset happened", UVM_NONE)
 
-  v_seq.randomize() with {on_the_fly_reset == 0;};
+  v_seq.randomize() with {on_the_fly_reset == 1;};
   v_seq.start(env.virt_seqr);
   
 
